@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { areas, getArea } from "../game/content";
+import { getArea } from "../game/content";
 import { playSoftTone } from "../game/audio";
 import { loadGame } from "../game/storage";
 import { addMuteButton, addTextButton } from "../game/ui";
@@ -48,8 +48,13 @@ export class OceanScene extends Phaser.Scene {
   private target?: Phaser.Math.Vector2;
   private wakeTimer = 0;
   private prompt?: Phaser.GameObjects.Container;
+  private targetMarker?: Phaser.GameObjects.Container;
+  private miniBoat?: Phaser.GameObjects.Triangle;
+  private statusText?: Phaser.GameObjects.Text;
+  private compassNeedle?: Phaser.GameObjects.Triangle;
   private nearby?: Hotspot;
   private shimmerLayers: Phaser.GameObjects.Graphics[] = [];
+  private wakeCooldown = 0;
 
   constructor() {
     super("Ocean");
@@ -64,6 +69,7 @@ export class OceanScene extends Phaser.Scene {
     this.addMapObjects();
     this.addBoat();
     this.addHud();
+    this.addTouchControls();
     this.setupInput();
   }
 
@@ -80,10 +86,55 @@ export class OceanScene extends Phaser.Scene {
     bg.fillStyle(0xffe08a, 1);
     bg.fillCircle(1460, 150, 64);
 
+    this.addSeaLife();
+
     for (let layer = 0; layer < 3; layer += 1) {
       const waves = this.add.graphics();
       waves.setDepth(layer);
       this.shimmerLayers.push(waves);
+    }
+  }
+
+  private addSeaLife() {
+    for (const point of [
+      [610, 730, "fish-sunny-minnow", 0.55],
+      [940, 790, "fish-ribbon-squid", 0.5],
+      [1260, 610, "fish-coral-tang", 0.52],
+      [1520, 360, "fish-starfish-pal", 0.44],
+    ] as const) {
+      const friend = this.add.image(point[0], point[1], point[2]).setScale(point[3]).setDepth(4).setAlpha(0.55);
+      this.tweens.add({
+        targets: friend,
+        x: friend.x + 26,
+        y: friend.y - 12,
+        duration: 2200 + point[0],
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    }
+
+    for (const point of [
+      [320, 520],
+      [760, 390],
+      [1190, 950],
+      [1580, 690],
+    ] as const) {
+      const buoy = this.add.graphics().setDepth(5);
+      buoy.fillStyle(0xff5d73, 1);
+      buoy.fillCircle(point[0], point[1], 15);
+      buoy.fillStyle(0xffffff, 1);
+      buoy.fillRect(point[0] - 13, point[1] - 4, 26, 8);
+      buoy.lineStyle(3, 0x143049, 0.25);
+      buoy.strokeCircle(point[0], point[1], 15);
+      this.tweens.add({
+        targets: buoy,
+        y: buoy.y + 10,
+        duration: 1300,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
     }
   }
 
@@ -134,7 +185,7 @@ export class OceanScene extends Phaser.Scene {
 
       object.setInteractive({ useHandCursor: true });
       object.on("pointerdown", () => {
-        this.target = new Phaser.Math.Vector2(hotspot.x, hotspot.y - 92);
+        this.setSailTarget(hotspot.x, hotspot.y - 92);
       });
     }
 
@@ -219,13 +270,95 @@ export class OceanScene extends Phaser.Scene {
         .setOrigin(1, 0.5),
     );
 
+    fixed.add(this.createCompass(190, 38));
+    fixed.add(this.createMiniMap(824, 392));
+
     addTextButton(this, 84, 500, "항구", () => this.scene.start("Harbor"), {
       width: 120,
       height: 44,
       fontSize: 18,
       fill: 0xd7f6ff,
     }).setScrollFactor(0).setDepth(60);
-    addMuteButton(this, 880, 500);
+    addMuteButton(this, 880, 500).setScrollFactor(0).setDepth(60);
+  }
+
+  private createCompass(x: number, y: number) {
+    const compass = this.add.container(x, y);
+    compass.add(this.add.circle(0, 0, 22, 0xfffbdf, 0.92).setStrokeStyle(3, 0x143049, 0.85));
+    compass.add(
+      this.add
+        .text(0, -1, "N", {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "12px",
+          fontStyle: "900",
+          color: "#143049",
+        })
+        .setOrigin(0.5),
+    );
+    this.compassNeedle = this.add.triangle(0, 0, 0, -17, -7, 7, 7, 7, 0xff5d73, 1).setStrokeStyle(2, 0x143049, 0.55);
+    compass.add(this.compassNeedle);
+    return compass;
+  }
+
+  private createMiniMap(x: number, y: number) {
+    const map = this.add.container(x, y);
+    map.add(this.add.rectangle(0, 0, 170, 102, 0xffffff, 0.72).setStrokeStyle(3, 0x143049, 0.85));
+    map.add(
+      this.add
+        .text(-74, -38, "작은 지도", {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "14px",
+          fontStyle: "900",
+          color: "#143049",
+        })
+        .setOrigin(0, 0.5),
+    );
+
+    for (const hotspot of hotspots) {
+      const unlocked = this.state.unlockedAreaIds.includes(hotspot.area.id);
+      const dot = this.add.circle(
+        -72 + (hotspot.x / WORLD_WIDTH) * 144,
+        -28 + (hotspot.y / WORLD_HEIGHT) * 70,
+        unlocked ? 5 : 4,
+        unlocked ? 0xffd166 : 0x91a4ad,
+        1,
+      );
+      dot.setStrokeStyle(2, 0x143049, 0.35);
+      map.add(dot);
+    }
+
+    this.miniBoat = this.add.triangle(-72, 22, 0, -7, -7, 7, 7, 7, 0x49bad9, 1).setStrokeStyle(2, 0x143049, 0.55);
+    map.add(this.miniBoat);
+    this.statusText = this.add
+      .text(-74, 38, "반짝 포인트를 찾아요", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "13px",
+        fontStyle: "800",
+        color: "#315a73",
+      })
+      .setOrigin(0, 0.5);
+    map.add(this.statusText);
+    return map;
+  }
+
+  private addTouchControls() {
+    const controls = this.add.container(250, 448).setScrollFactor(0).setDepth(62).setAlpha(0.72);
+    controls.add(this.add.circle(0, 0, 58, 0xffffff, 0.48).setStrokeStyle(3, 0x143049, 0.45));
+    const controlsText = this.add
+      .text(0, 0, "터치\n항해", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "16px",
+        fontStyle: "900",
+        color: "#143049",
+        align: "center",
+      })
+      .setOrigin(0.5);
+    controls.add(controlsText);
+    controls.setSize(116, 116);
+    controls.setInteractive({ useHandCursor: true });
+    controls.on("pointerdown", () => {
+      this.setSailTarget(this.boat.x + 260, this.boat.y);
+    });
   }
 
   private setupInput() {
@@ -236,7 +369,7 @@ export class OceanScene extends Phaser.Scene {
         return;
       }
       const world = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
-      this.target = new Phaser.Math.Vector2(
+      this.setSailTarget(
         Phaser.Math.Clamp(world.x, 80, WORLD_WIDTH - 80),
         Phaser.Math.Clamp(world.y, 90, WORLD_HEIGHT - 90),
       );
@@ -256,7 +389,8 @@ export class OceanScene extends Phaser.Scene {
       direction.normalize().scale(speed);
       this.setBoatPosition(this.boat.x + direction.x, this.boat.y + direction.y);
       this.rotateBoat(direction);
-      this.addWake();
+      this.addWake(delta);
+      this.updateHudDirection(direction);
       return;
     }
 
@@ -273,7 +407,9 @@ export class OceanScene extends Phaser.Scene {
     toTarget.normalize().scale(Math.min(speed, toTarget.length()));
     this.setBoatPosition(this.boat.x + toTarget.x, this.boat.y + toTarget.y);
     this.rotateBoat(toTarget);
-    this.addWake();
+    this.addWake(delta);
+    this.updateHudDirection(toTarget);
+    this.updateTargetMarker();
   }
 
   private setBoatPosition(x: number, y: number) {
@@ -289,10 +425,12 @@ export class OceanScene extends Phaser.Scene {
     this.boat.setFlipX(direction.x < -0.1);
   }
 
-  private addWake() {
-    if (this.time.now % 5 > 1.2) {
+  private addWake(delta: number) {
+    this.wakeCooldown -= delta;
+    if (this.wakeCooldown > 0) {
       return;
     }
+    this.wakeCooldown = 110;
     const wake = this.add.circle(this.boat.x - 24, this.boat.y + 22, 10, 0xffffff, 0.38).setDepth(9);
     this.tweens.add({
       targets: wake,
@@ -301,6 +439,45 @@ export class OceanScene extends Phaser.Scene {
       duration: 620,
       onComplete: () => wake.destroy(),
     });
+  }
+
+  private setSailTarget(x: number, y: number) {
+    this.target = new Phaser.Math.Vector2(x, y);
+    this.targetMarker?.destroy();
+    const ring = this.add.circle(0, 0, 30, 0xffd166, 0.15).setStrokeStyle(4, 0xffd166, 0.88);
+    const sparkle = this.add.image(0, -30, "sparkle-point").setScale(0.55);
+    this.targetMarker = this.add.container(x, y, [ring, sparkle]).setDepth(11);
+    this.tweens.add({
+      targets: this.targetMarker,
+      scale: 1.18,
+      alpha: 0.5,
+      duration: 760,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
+  }
+
+  private updateTargetMarker() {
+    if (!this.target || !this.targetMarker) {
+      return;
+    }
+    const distance = Phaser.Math.Distance.Between(this.boat.x, this.boat.y, this.target.x, this.target.y);
+    if (distance < 28) {
+      this.targetMarker.destroy();
+      this.targetMarker = undefined;
+    }
+  }
+
+  private updateHudDirection(direction: Phaser.Math.Vector2) {
+    this.compassNeedle?.setRotation(Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) + Math.PI / 2);
+    if (this.miniBoat) {
+      this.miniBoat.setPosition(
+        -72 + (this.boat.x / WORLD_WIDTH) * 144,
+        -28 + (this.boat.y / WORLD_HEIGHT) * 70,
+      );
+      this.miniBoat.setRotation(Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) + Math.PI / 2);
+    }
   }
 
   private updateNearbyPrompt() {
@@ -315,9 +492,11 @@ export class OceanScene extends Phaser.Scene {
     this.nearby = closest;
 
     if (!closest) {
+      this.statusText?.setText("반짝 포인트를 찾아요");
       return;
     }
 
+    this.statusText?.setText(`${closest.area.name} 발견!`);
     playSoftTone(this, this.state, 640, 0.06);
     const panel = this.add.rectangle(0, 0, 438, 88, 0xffffff, 0.86).setStrokeStyle(4, 0x143049);
     const text = this.add
@@ -343,5 +522,8 @@ export class OceanScene extends Phaser.Scene {
       fill: 0xffd166,
     });
     this.prompt = this.add.container(480, 112, [panel, text, hint, button]).setScrollFactor(0).setDepth(70);
+    this.prompt.setSize(438, 88);
+    this.prompt.setInteractive({ useHandCursor: true });
+    this.prompt.on("pointerdown", () => this.scene.start("Fishing", { areaId: closest.area.id }));
   }
 }

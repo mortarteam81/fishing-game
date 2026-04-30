@@ -98,7 +98,7 @@ export function addHeader(scene: Phaser.Scene, title: string, state: PlayerState
     .setOrigin(1, 0.5);
 }
 
-export function addMuteButton(scene: Phaser.Scene, x = 880, y = 500): void {
+export function addMuteButton(scene: Phaser.Scene, x = 880, y = 500): Phaser.GameObjects.Container {
   const state = loadGame();
   const label = () => (state.muted ? "소리 켜기" : "소리 끄기");
   let text: Phaser.GameObjects.Text;
@@ -117,6 +117,7 @@ export function addMuteButton(scene: Phaser.Scene, x = 880, y = 500): void {
     { width: 120, height: 42, fontSize: 17, fill: 0xd7f6ff },
   );
   text = button.list[1] as Phaser.GameObjects.Text;
+  return button;
 }
 
 export function addOceanBackground(scene: Phaser.Scene, variant: "harbor" | "beach" | "pier" | "coral"): void {
