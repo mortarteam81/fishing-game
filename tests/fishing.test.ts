@@ -1,0 +1,34 @@
+import { describe, expect, it } from "vitest";
+import { startFishing, resolveTiming } from "../src/game/fishing";
+import { createInitialState } from "../src/game/storage";
+
+describe("fishing loop", () => {
+  it("creates a fishing attempt for the selected area", () => {
+    const attempt = startFishing("sunny-beach", createInitialState(), () => 0.1);
+
+    expect(attempt.areaId).toBe("sunny-beach");
+    expect(attempt.fish.areaIds).toContain("sunny-beach");
+    expect(attempt.targetWidth).toBeGreaterThan(0);
+  });
+
+  it("rewards a successful center timing", () => {
+    const state = createInitialState();
+    const attempt = startFishing("sunny-beach", state, () => 0.1);
+    const result = resolveTiming(attempt, attempt.targetCenter, state);
+
+    expect(result.success).toBe(true);
+    expect(result.quality).toBe("sparkle");
+    expect(result.shells).toBeGreaterThan(0);
+    expect(result.xp).toBeGreaterThan(0);
+  });
+
+  it("gives consolation reward when timing misses", () => {
+    const state = createInitialState();
+    const attempt = startFishing("sunny-beach", state, () => 0.1);
+    const result = resolveTiming(attempt, 0, state);
+
+    expect(result.success).toBe(false);
+    expect(result.shells).toBeGreaterThan(0);
+    expect(result.consolation).toBeTruthy();
+  });
+});

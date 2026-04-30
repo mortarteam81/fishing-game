@@ -1,0 +1,88 @@
+import Phaser from "phaser";
+import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
+import { loadGame } from "../game/storage";
+import type { CatchResult, PlayerState } from "../game/types";
+
+export class CatchResultScene extends Phaser.Scene {
+  private result!: CatchResult;
+  private areaId = "sunny-beach";
+  private state!: PlayerState;
+
+  constructor() {
+    super("CatchResult");
+  }
+
+  init(data: { result: CatchResult; areaId: string }) {
+    this.result = data.result;
+    this.areaId = data.areaId;
+  }
+
+  create() {
+    this.state = loadGame();
+    addOceanBackground(this, "harbor");
+    addHeader(this, "만남 기록", this.state);
+    addMuteButton(this);
+    addPanel(this, 480, 262, 620, 330, 0xffffff);
+
+    if (this.result.success && this.result.fish) {
+      this.add.image(480, 180, this.result.fish.assetKey).setScale(2.1);
+      this.add
+        .text(480, 272, this.result.fish.name, {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "36px",
+          fontStyle: "900",
+          color: "#143049",
+        })
+        .setOrigin(0.5);
+      this.add
+        .text(480, 322, this.result.fish.funFact, {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "22px",
+          fontStyle: "700",
+          color: "#315a73",
+          align: "center",
+          wordWrap: { width: 520 },
+        })
+        .setOrigin(0.5);
+    } else {
+      this.add
+        .text(480, 190, "퐁!", {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "54px",
+          fontStyle: "900",
+          color: "#143049",
+        })
+        .setOrigin(0.5);
+      this.add
+        .text(480, 280, this.result.consolation ?? "반짝 조개", {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "34px",
+          fontStyle: "900",
+          color: "#143049",
+        })
+        .setOrigin(0.5);
+    }
+
+    this.add
+      .text(480, 376, `${this.result.message}\n조개 +${this.result.shells}  ·  경험치 +${this.result.xp}`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "23px",
+        fontStyle: "800",
+        color: "#143049",
+        align: "center",
+        lineSpacing: 8,
+      })
+      .setOrigin(0.5);
+
+    addTextButton(this, 380, 470, "한 번 더", () => this.scene.start("Fishing", { areaId: this.areaId }), {
+      width: 180,
+      height: 58,
+      fill: 0xffd166,
+    });
+    addTextButton(this, 580, 470, "항구로", () => this.scene.start("Harbor"), {
+      width: 180,
+      height: 58,
+      fill: 0xd7f6ff,
+    });
+  }
+}
