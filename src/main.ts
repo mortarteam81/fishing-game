@@ -17,7 +17,7 @@ if (!parent) {
   new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    backgroundColor: "#9fe5ff",
+    backgroundColor: "#bdeedc",
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

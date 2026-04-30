@@ -3,6 +3,7 @@ import { getArea } from "../game/content";
 import { playSoftTone } from "../game/audio";
 import { recordCatch, recordConsolation, refreshQuestCompletion } from "../game/progression";
 import { resolveTiming, startFishing } from "../game/fishing";
+import { PALETTE, TEXT } from "../game/palette";
 import { loadGame, saveGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addTextButton } from "../game/ui";
 import type { CatchResult, FishingAttempt, PlayerState } from "../game/types";
@@ -35,13 +36,13 @@ export class FishingScene extends Phaser.Scene {
     addHeader(this, area?.name ?? "낚시터", this.state);
     addMuteButton(this);
 
-    this.add.image(210, 340, "boat").setScale(1.15);
+    this.addFishingSetPiece();
     this.add
       .text(480, 118, "물결이 반짝이면 버튼을 눌러요.", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "28px",
         fontStyle: "800",
-        color: "#143049",
+        color: TEXT.primary,
         align: "center",
       })
       .setOrigin(0.5);
@@ -49,15 +50,19 @@ export class FishingScene extends Phaser.Scene {
     this.castButton = addTextButton(this, 480, 430, "낚시하기", () => this.castLine(), {
       width: 230,
       height: 72,
-      fill: 0xffd166,
+      fill: PALETTE.butter,
       fontSize: 28,
+      iconKey: "icon-rod",
+      iconScale: 0.5,
     });
 
     addTextButton(this, 92, 500, "항구", () => this.scene.start("Harbor"), {
       width: 120,
       height: 44,
       fontSize: 18,
-      fill: 0xd7f6ff,
+      fill: PALETTE.seaFoam,
+      iconKey: "icon-harbor",
+      iconScale: 0.34,
     });
   }
 
@@ -90,7 +95,7 @@ export class FishingScene extends Phaser.Scene {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "26px",
         fontStyle: "800",
-        color: "#143049",
+        color: TEXT.primary,
       })
       .setOrigin(0.5);
 
@@ -105,17 +110,17 @@ export class FishingScene extends Phaser.Scene {
     this.waitingText?.destroy();
     playSoftTone(this, this.state, 660, 0.08);
 
-    const bg = this.add.rectangle(0, 0, 410, 56, 0xffffff, 0.88).setStrokeStyle(4, 0x143049);
+    const bg = this.add.rectangle(0, 0, 410, 56, PALETTE.paper, 0.9).setStrokeStyle(4, PALETTE.ink);
     const targetWidth = this.attempt.targetWidth * 360;
-    const target = this.add.rectangle(0, 0, targetWidth, 42, 0x76e39b, 0.95);
-    const sparkle = this.add.rectangle(0, 0, 34, 42, 0xfff06a, 0.95);
-    this.needle = this.add.rectangle(-180, 0, 10, 78, 0xff5d73, 1);
+    const target = this.add.rectangle(0, 0, targetWidth, 42, PALETTE.moss, 0.95);
+    const sparkle = this.add.rectangle(0, 0, 34, 42, PALETTE.butter, 0.95);
+    this.needle = this.add.rectangle(-180, 0, 10, 78, PALETTE.coralDeep, 1);
     const text = this.add
       .text(0, -72, "초록빛일 때 당기기!", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "28px",
         fontStyle: "800",
-        color: "#143049",
+        color: TEXT.primary,
       })
       .setOrigin(0.5);
     this.meterGroup = this.add.container(480, 382, [bg, target, sparkle, this.needle, text]);
@@ -145,5 +150,22 @@ export class FishingScene extends Phaser.Scene {
     } else {
       playSoftTone(this, this.state, 360, 0.08);
     }
+  }
+
+  private addFishingSetPiece() {
+    const landmark =
+      this.areaId === "coral-sea" ? "map-reef" : this.areaId === "little-pier" ? "map-pier" : "map-island";
+    this.add.image(738, 308, landmark).setScale(this.areaId === "little-pier" ? 1.05 : 0.92).setAlpha(0.86);
+    this.add.image(210, 340, "boat").setScale(1.15);
+    this.add.image(244, 282, "captain-kid").setScale(0.48);
+
+    const line = this.add.graphics();
+    line.lineStyle(4, PALETTE.inkSoft, 0.36);
+    line.beginPath();
+    line.moveTo(262, 300);
+    line.lineTo(372, 365);
+    line.strokePath();
+    line.fillStyle(PALETTE.butter, 0.85);
+    line.fillCircle(374, 365, 8);
   }
 }

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { PALETTE, TEXT } from "../game/palette";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
 import { loadGame } from "../game/storage";
 import type { CatchResult, PlayerState } from "../game/types";
@@ -22,16 +23,17 @@ export class CatchResultScene extends Phaser.Scene {
     addOceanBackground(this, "harbor");
     addHeader(this, "만남 기록", this.state);
     addMuteButton(this);
-    addPanel(this, 480, 262, 620, 330, 0xffffff);
+    addPanel(this, 480, 262, 620, 330, PALETTE.paper);
 
     if (this.result.success && this.result.fish) {
+      this.add.image(480, 176, "sparkle-point").setScale(1.25).setAlpha(0.5);
       this.add.image(480, 180, this.result.fish.assetKey).setScale(2.1);
       this.add
         .text(480, 272, this.result.fish.name, {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
           fontSize: "36px",
           fontStyle: "900",
-          color: "#143049",
+          color: TEXT.primary,
         })
         .setOrigin(0.5);
       this.add
@@ -39,7 +41,7 @@ export class CatchResultScene extends Phaser.Scene {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
           fontSize: "22px",
           fontStyle: "700",
-          color: "#315a73",
+          color: TEXT.secondary,
           align: "center",
           wordWrap: { width: 520 },
         })
@@ -50,7 +52,7 @@ export class CatchResultScene extends Phaser.Scene {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
           fontSize: "54px",
           fontStyle: "900",
-          color: "#143049",
+          color: TEXT.primary,
         })
         .setOrigin(0.5);
       this.add
@@ -58,7 +60,7 @@ export class CatchResultScene extends Phaser.Scene {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
           fontSize: "34px",
           fontStyle: "900",
-          color: "#143049",
+          color: TEXT.primary,
         })
         .setOrigin(0.5);
     }
@@ -68,7 +70,7 @@ export class CatchResultScene extends Phaser.Scene {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "23px",
         fontStyle: "800",
-        color: "#143049",
+        color: TEXT.primary,
         align: "center",
         lineSpacing: 8,
       })
@@ -77,12 +79,16 @@ export class CatchResultScene extends Phaser.Scene {
     addTextButton(this, 380, 470, "한 번 더", () => this.scene.start("Fishing", { areaId: this.areaId }), {
       width: 180,
       height: 58,
-      fill: 0xffd166,
+      fill: PALETTE.butter,
+      iconKey: "icon-repeat",
+      iconScale: 0.38,
     });
     addTextButton(this, 580, 470, "항구로", () => this.scene.start("Harbor"), {
       width: 180,
       height: 58,
-      fill: 0xd7f6ff,
+      fill: PALETTE.seaFoam,
+      iconKey: "icon-harbor",
+      iconScale: 0.36,
     });
   }
 }

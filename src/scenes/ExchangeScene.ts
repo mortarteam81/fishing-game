@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { items } from "../game/content";
+import { PALETTE, TEXT } from "../game/palette";
 import { buyItem, canBuyItem, equipItem, refreshQuestCompletion } from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
@@ -23,7 +24,7 @@ export class ExchangeScene extends Phaser.Scene {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "22px",
         fontStyle: "800",
-        color: "#143049",
+        color: TEXT.primary,
       })
       .setOrigin(0.5);
 
@@ -33,7 +34,9 @@ export class ExchangeScene extends Phaser.Scene {
       width: 120,
       height: 44,
       fontSize: 18,
-      fill: 0xd7f6ff,
+      fill: PALETTE.seaFoam,
+      iconKey: "icon-harbor",
+      iconScale: 0.34,
     });
   }
 
@@ -44,23 +47,24 @@ export class ExchangeScene extends Phaser.Scene {
     const y = 145 + row * 118;
     const owned = this.state.ownedItemIds.includes(item.id);
     const equipped = this.state.equippedRodId === item.id || this.state.equippedBaitId === item.id;
-    addPanel(this, x, y, 340, 96, owned ? 0xffffff : 0xfffbdf);
+    addPanel(this, x, y, 340, 96, owned ? PALETTE.paper : PALETTE.warmCream);
+    this.add.image(x - 148, y + 17, this.itemIcon(item)).setScale(0.46);
 
     this.add
-      .text(x - 145, y - 27, item.name, {
+      .text(x - 110, y - 27, item.name, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "22px",
         fontStyle: "900",
-        color: "#143049",
+        color: TEXT.primary,
       })
       .setOrigin(0, 0.5);
     this.add
-      .text(x - 145, y + 6, item.description, {
+      .text(x - 110, y + 6, item.description, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "15px",
         fontStyle: "700",
-        color: "#315a73",
-        wordWrap: { width: 210 },
+        color: TEXT.secondary,
+        wordWrap: { width: 190 },
       })
       .setOrigin(0, 0.5);
 
@@ -68,7 +72,7 @@ export class ExchangeScene extends Phaser.Scene {
     const disabled = (!owned && !canBuyItem(this.state, item.id)) || equipped;
     addTextButton(
       this,
-      x + 112,
+      x + 106,
       y + 15,
       label,
       () => {
@@ -77,12 +81,24 @@ export class ExchangeScene extends Phaser.Scene {
         this.scene.restart();
       },
       {
-        width: 105,
+        width: 118,
         height: 44,
-        fontSize: 16,
-        fill: owned ? 0x9bf6d2 : 0xffd166,
+        fontSize: 15,
+        fill: owned ? PALETTE.seaFoam : PALETTE.butter,
         disabled,
+        iconKey: owned ? this.itemIcon(item) : "icon-shell",
+        iconScale: 0.28,
       },
     );
+  }
+
+  private itemIcon(item: ItemDefinition) {
+    if (item.kind === "rod") {
+      return "icon-rod";
+    }
+    if (item.kind === "bait") {
+      return "icon-bait";
+    }
+    return "icon-shop";
   }
 }

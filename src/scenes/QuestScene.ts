@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { quests } from "../game/content";
+import { PALETTE, TEXT } from "../game/palette";
 import {
   claimQuest,
   refreshQuestCompletion,
@@ -31,20 +32,23 @@ export class QuestScene extends Phaser.Scene {
       width: 120,
       height: 44,
       fontSize: 18,
-      fill: 0xd7f6ff,
+      fill: PALETTE.seaFoam,
+      iconKey: "icon-harbor",
+      iconScale: 0.34,
     });
   }
 
   private addQuestRow(quest: QuestDefinition, index: number) {
     const y = 88 + index * 78;
     const progress = this.state.questProgress[quest.id] ?? { completed: false, claimed: false };
-    addPanel(this, 480, y, 790, 64, progress.claimed ? 0xe8f4ea : 0xffffff);
+    addPanel(this, 480, y, 790, 64, progress.claimed ? 0xe8f4ea : PALETTE.paper);
+    this.add.image(112, y, "icon-quest").setScale(0.42).setAlpha(progress.claimed ? 0.55 : 1);
     this.add
-      .text(110, y - 16, quest.title, {
+      .text(142, y - 16, quest.title, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "21px",
         fontStyle: "900",
-        color: "#143049",
+        color: progress.claimed ? TEXT.disabled : TEXT.primary,
       })
       .setOrigin(0, 0.5);
 
@@ -53,11 +57,11 @@ export class QuestScene extends Phaser.Scene {
       .join("  ·  ");
 
     this.add
-      .text(110, y + 16, stepText, {
+      .text(142, y + 16, stepText, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "15px",
         fontStyle: "700",
-        color: "#315a73",
+        color: progress.claimed ? TEXT.disabled : TEXT.secondary,
       })
       .setOrigin(0, 0.5);
 
@@ -67,7 +71,7 @@ export class QuestScene extends Phaser.Scene {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "15px",
         fontStyle: "800",
-        color: "#315a73",
+        color: TEXT.secondary,
       })
       .setOrigin(0, 0.5);
 
@@ -84,8 +88,10 @@ export class QuestScene extends Phaser.Scene {
         width: 120,
         height: 36,
         fontSize: 15,
-        fill: progress.completed ? 0xffd166 : 0xd7f6ff,
+        fill: progress.completed ? PALETTE.butter : PALETTE.seaFoam,
         disabled: progress.claimed || !progress.completed,
+        iconKey: progress.completed && !progress.claimed ? "icon-shell" : undefined,
+        iconScale: 0.28,
       },
     );
   }

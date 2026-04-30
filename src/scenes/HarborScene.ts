@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { areas } from "../game/content";
+import { PALETTE, TEXT } from "../game/palette";
 import { nextQuestHint, refreshQuestCompletion } from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
@@ -27,6 +28,7 @@ export class HarborScene extends Phaser.Scene {
 
   private addBoat() {
     const boat = this.add.image(190, 330, "boat").setScale(1.4);
+    const captain = this.add.image(218, 260, "captain-kid").setScale(0.62);
     this.tweens.add({
       targets: boat,
       y: 340,
@@ -35,16 +37,24 @@ export class HarborScene extends Phaser.Scene {
       repeat: -1,
       ease: "Sine.inOut",
     });
+    this.tweens.add({
+      targets: captain,
+      y: 270,
+      duration: 1600,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
   }
 
   private addHeroPanel() {
-    addPanel(this, 625, 142, 560, 150, 0xffffff);
+    addPanel(this, 625, 142, 560, 150, PALETTE.paper);
     this.add
       .text(380, 95, "오늘은 어떤 바다 친구를 만날까요?", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "30px",
         fontStyle: "800",
-        color: "#143049",
+        color: TEXT.primary,
       })
       .setOrigin(0, 0.5);
     this.add
@@ -52,7 +62,7 @@ export class HarborScene extends Phaser.Scene {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "22px",
         fontStyle: "800",
-        color: "#315a73",
+        color: TEXT.secondary,
         wordWrap: { width: 480 },
       })
       .setOrigin(0, 0.5);
@@ -61,7 +71,7 @@ export class HarborScene extends Phaser.Scene {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "18px",
         fontStyle: "700",
-        color: "#315a73",
+        color: TEXT.secondary,
         wordWrap: { width: 480 },
       })
       .setOrigin(0, 0.5);
@@ -73,15 +83,17 @@ export class HarborScene extends Phaser.Scene {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "25px",
         fontStyle: "800",
-        color: "#143049",
+        color: TEXT.primary,
       })
       .setOrigin(0, 0.5);
 
     addTextButton(this, 175, 470, "항해 시작", () => this.scene.start("Ocean"), {
       width: 220,
       height: 66,
-      fill: 0xffd166,
+      fill: PALETTE.butter,
       fontSize: 26,
+      iconKey: "icon-map",
+      iconScale: 0.5,
     });
 
     areas.forEach((area, index) => {
@@ -98,8 +110,10 @@ export class HarborScene extends Phaser.Scene {
           width: 152,
           height: 54,
           fontSize: 17,
-          fill: unlocked ? 0xffd166 : 0xb8ccd7,
+          fill: unlocked ? PALETTE.butter : PALETTE.disabled,
           disabled: !unlocked,
+          iconKey: unlocked ? "icon-bait" : undefined,
+          iconScale: 0.38,
         },
       );
     });
@@ -108,15 +122,21 @@ export class HarborScene extends Phaser.Scene {
   private addNavigation() {
     addTextButton(this, 505, 265, "도감", () => this.scene.start("Collection"), {
       width: 150,
-      fill: 0x9bf6d2,
+      fill: PALETTE.seaFoam,
+      iconKey: "icon-collection",
+      iconScale: 0.38,
     });
     addTextButton(this, 675, 265, "교환소", () => this.scene.start("Exchange"), {
       width: 150,
       fill: 0xffc2d1,
+      iconKey: "icon-shop",
+      iconScale: 0.38,
     });
     addTextButton(this, 845, 265, "퀘스트", () => this.scene.start("Quest"), {
       width: 150,
-      fill: 0xc7ceff,
+      fill: PALETTE.lavender,
+      iconKey: "icon-quest",
+      iconScale: 0.38,
     });
   }
 }
