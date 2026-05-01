@@ -1,10 +1,19 @@
 import Phaser from "phaser";
 import { areas, fish as fishContent } from "../game/content";
 import { PALETTE } from "../game/palette";
+import { CREATURE_SVGS } from "../game/creatureSvgs";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
     super("Boot");
+  }
+
+  preload() {
+    for (const [key, svg] of Object.entries(CREATURE_SVGS)) {
+      if (!this.textures.exists(key)) {
+        this.load.image(key, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+      }
+    }
   }
 
   create() {
@@ -662,14 +671,17 @@ export class BootScene extends Phaser.Scene {
     }
 
     if (!this.textures.exists("sparkle-point")) {
+      // 家紋 kamon-style fishing point marker
       const sparkle = this.make.graphics({ x: 0, y: 0 }, false);
-      sparkle.fillStyle(PALETTE.butter, 0.95);
-      sparkle.fillCircle(32, 32, 15);
-      sparkle.fillStyle(PALETTE.white, 0.9);
-      sparkle.fillCircle(26, 26, 5);
-      sparkle.lineStyle(3, PALETTE.white, 0.75);
-      sparkle.lineBetween(32, 4, 32, 60);
-      sparkle.lineBetween(4, 32, 60, 32);
+      sparkle.fillStyle(PALETTE.butter, 0.90);
+      sparkle.fillCircle(32, 32, 18);
+      sparkle.lineStyle(2.5, PALETTE.ink, 0.28);
+      sparkle.strokeCircle(32, 32, 18);
+      sparkle.lineStyle(1.5, PALETTE.white, 0.62);
+      sparkle.strokeCircle(32, 32, 12);
+      sparkle.lineStyle(2, PALETTE.white, 0.82);
+      sparkle.lineBetween(32, 17, 32, 47);
+      sparkle.lineBetween(17, 32, 47, 32);
       sparkle.generateTexture("sparkle-point", 64, 64);
       sparkle.destroy();
     }
@@ -886,19 +898,20 @@ export class BootScene extends Phaser.Scene {
   }
 
   private colorFromHash(hash: number) {
+    // Japanese nature illustration colour palette for generated creatures
     const palette = [
-      PALETTE.seaGlass,
-      PALETTE.lagoon,
-      PALETTE.coral,
-      PALETTE.coralDeep,
-      PALETTE.butter,
-      PALETTE.lavender,
-      PALETTE.moss,
-      0x8bd7ef,
-      0xffb56f,
-      0x92d7d3,
-      0xb9c3ff,
-      0xf0ead8,
+      PALETTE.seaGlass,   // jade-teal
+      PALETTE.lagoon,     // deep indigo
+      PALETTE.coral,      // vermilion
+      PALETTE.coralDeep,  // deep vermilion
+      PALETTE.butter,     // kinpaku gold
+      PALETTE.lavender,   // fusuma grey-blue
+      PALETTE.moss,       // hisui jade
+      0x8bc8e8,           // sky blue
+      0xe0a850,           // warm amber
+      0x7ac0b8,           // sea-glass
+      0xa0afd8,           // pale indigo
+      PALETTE.warmCream,  // aged washi
     ];
     return palette[hash % palette.length];
   }

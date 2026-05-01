@@ -87,7 +87,7 @@ export class OceanScene extends Phaser.Scene {
 
   private drawSea() {
     const bg = this.add.graphics();
-    bg.fillGradientStyle(0xb3edf2, 0xb3edf2, PALETTE.seaGlass, PALETTE.lagoon, 1);
+    bg.fillGradientStyle(0xaacfe0, 0xaacfe0, PALETTE.seaGlass, PALETTE.lagoon, 1);
     bg.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     bg.fillStyle(PALETTE.butter, 1);
     bg.fillCircle(1460, 150, 64);
