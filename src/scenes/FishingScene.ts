@@ -135,14 +135,15 @@ export class FishingScene extends Phaser.Scene {
     playSoftTone(this, this.state, 660, 0.08);
     this.playBiteEffects();
 
-    const bg = this.add.rectangle(0, 0, 410, 56, PALETTE.paper, 0.9).setStrokeStyle(4, PALETTE.ink);
+    // 釣り計器 Fishing meter — washi paper with lacquer border
+    const bg = this.add.rectangle(0, 0, 410, 56, PALETTE.paper, 0.92).setStrokeStyle(3, PALETTE.ink, 0.72);
     const targetWidth = this.attempt.targetWidth * 360;
     const target = this.add.rectangle(0, 0, targetWidth, 42, PALETTE.moss, 0.95);
-    const sparkle = this.add.rectangle(0, 0, 34, 42, PALETTE.butter, 0.95);
-    this.needle = this.add.rectangle(-180, 0, 10, 78, PALETTE.coralDeep, 1);
+    const sparkle = this.add.rectangle(0, 0, 34, 42, PALETTE.butter, 0.90);
+    this.needle = this.add.rectangle(-180, 0, 8, 78, PALETTE.coral, 1);
     this.targetZone = target;
-    this.progressBar = this.add.rectangle(-180, 58, 126, 14, PALETTE.lagoon, 1).setOrigin(0, 0.5);
-    const progressBg = this.add.rectangle(0, 58, 360, 18, PALETTE.white, 0.74).setStrokeStyle(3, PALETTE.ink, 0.4);
+    this.progressBar = this.add.rectangle(-180, 58, 126, 14, PALETTE.seaGlass, 1).setOrigin(0, 0.5);
+    const progressBg = this.add.rectangle(0, 58, 360, 18, PALETTE.warmCream, 0.82).setStrokeStyle(2, PALETTE.ink, 0.35);
     const text = this.add
       .text(0, -76, "누르고 있으면 릴 감기 · 초록빛에 맞추면 빨라져요", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
@@ -187,7 +188,7 @@ export class FishingScene extends Phaser.Scene {
     this.reelProgress = Phaser.Math.Clamp(this.reelProgress, 0, 1);
     if (this.progressBar) {
       this.progressBar.width = 360 * this.reelProgress;
-      this.progressBar.setFillStyle(inTarget ? PALETTE.lagoon : PALETTE.coralDeep, 1);
+      this.progressBar.setFillStyle(inTarget ? PALETTE.seaGlass : PALETTE.coral, 1);
     }
 
     if (this.reelProgress >= 1) {
