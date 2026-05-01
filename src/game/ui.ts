@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { PALETTE, TEXT } from "./palette";
 import { loadGame, saveGame } from "./storage";
-import type { PlayerState } from "./types";
+import type { AreaTheme, PlayerState } from "./types";
 
 export type ButtonOptions = {
   width?: number;
@@ -102,9 +102,9 @@ export function addHeader(scene: Phaser.Scene, title: string, state: PlayerState
     .setOrigin(0, 0.5);
 
   scene.add
-    .text(928, 26, `조개 ${state.shells}  ·  Lv.${state.level}`, {
+    .text(928, 26, `${state.captain.name}  ·  조개 ${state.shells}  ·  Lv.${state.level}`, {
       fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-      fontSize: "22px",
+      fontSize: "20px",
       fontStyle: "700",
       color: TEXT.primary,
     })
@@ -133,13 +133,31 @@ export function addMuteButton(scene: Phaser.Scene, x = 880, y = 500): Phaser.Gam
   return button;
 }
 
-export function addOceanBackground(scene: Phaser.Scene, variant: "harbor" | "beach" | "pier" | "coral"): void {
-  const top = variant === "coral" ? 0x9de8dc : variant === "pier" ? 0xaee7df : 0xace9ee;
-  const bottom = variant === "harbor" ? PALETTE.warmCream : variant === "coral" ? PALETTE.seaGlass : 0xf7e7b1;
+type OceanBackgroundVariant = "harbor" | AreaTheme;
+
+const backgroundPalettes: Record<OceanBackgroundVariant, { top: number; mid: number; bottom: number; accent: number; sun: number }> = {
+  harbor: { top: 0xace9ee, mid: PALETTE.lagoon, bottom: PALETTE.warmCream, accent: PALETTE.coral, sun: PALETTE.butter },
+  beach: { top: 0xace9ee, mid: 0x79d7d6, bottom: 0xf7e7b1, accent: PALETTE.coral, sun: PALETTE.butter },
+  pier: { top: 0xaee7df, mid: 0x6ec3c7, bottom: 0xd9c4a3, accent: PALETTE.driftwoodDark, sun: 0xffd786 },
+  coral: { top: 0x9de8dc, mid: 0x78d5ca, bottom: PALETTE.seaGlass, accent: PALETTE.coral, sun: 0xffc2d1 },
+  mist: { top: 0xd7e6e8, mid: 0x9bc4c8, bottom: 0x809aa8, accent: 0xb9c3c9, sun: 0xf0ead8 },
+  kelp: { top: 0x9edfc9, mid: 0x4fa98f, bottom: 0x2f6c68, accent: 0x356f4f, sun: 0xd6e87a },
+  basalt: { top: 0xa8ccd0, mid: 0x497d8d, bottom: 0x283f4a, accent: 0x2c2f36, sun: 0xf2d8a7 },
+  pearl: { top: 0xd6f2ef, mid: 0x8bded8, bottom: 0xf6dfd1, accent: 0xf0b8c6, sun: 0xffffff },
+  storm: { top: 0x879dac, mid: 0x395f72, bottom: 0x273948, accent: 0xf0d16b, sun: 0xbec6d4 },
+  moon: { top: 0x7488b4, mid: 0x34486f, bottom: 0x17233f, accent: 0xb9c3ff, sun: 0xe8eaff },
+  amber: { top: 0xffc98a, mid: 0xdf8f65, bottom: 0x5c7587, accent: 0xf6cf62, sun: 0xffe8a6 },
+  glacier: { top: 0xd8f5ff, mid: 0x93dce8, bottom: 0x6b9fc5, accent: 0xffffff, sun: 0xe8fbff },
+  trench: { top: 0x395b77, mid: 0x16314a, bottom: 0x071729, accent: 0x74d7cf, sun: 0x9de8ff },
+  aurora: { top: 0x6e8bd2, mid: 0x3d579a, bottom: 0x102340, accent: 0xb9c3ff, sun: 0x9effdf },
+};
+
+export function addOceanBackground(scene: Phaser.Scene, variant: OceanBackgroundVariant): void {
+  const palette = backgroundPalettes[variant];
   const graphics = scene.add.graphics();
-  graphics.fillGradientStyle(top, top, bottom, bottom, 1);
+  graphics.fillGradientStyle(palette.top, palette.top, palette.bottom, palette.bottom, 1);
   graphics.fillRect(0, 0, 960, 540);
-  graphics.fillStyle(PALETTE.lagoon, 0.48);
+  graphics.fillStyle(palette.mid, 0.58);
   graphics.fillRect(0, 330, 960, 210);
 
   for (let i = 0; i < 7; i += 1) {
@@ -153,10 +171,64 @@ export function addOceanBackground(scene: Phaser.Scene, variant: "harbor" | "bea
     graphics.strokePath();
   }
 
-  graphics.fillStyle(PALETTE.butter, 1);
+  graphics.fillStyle(palette.sun, 1);
   graphics.fillCircle(820, 86, 42);
-  graphics.fillStyle(PALETTE.coral, 0.18);
+  graphics.fillStyle(palette.accent, 0.18);
   graphics.fillCircle(114, 156, 26);
   graphics.fillStyle(PALETTE.moss, 0.22);
   graphics.fillCircle(152, 162, 20);
+
+  drawBackgroundLandmarks(graphics, variant, palette.accent);
+}
+
+function drawBackgroundLandmarks(
+  graphics: Phaser.GameObjects.Graphics,
+  variant: OceanBackgroundVariant,
+  accent: number,
+) {
+  graphics.fillStyle(0xffffff, 0.22);
+  if (variant === "mist") {
+    for (let i = 0; i < 4; i += 1) {
+      graphics.fillRoundedRect(120 + i * 190, 176 + (i % 2) * 28, 170, 16, 8);
+    }
+  } else if (variant === "kelp") {
+    graphics.lineStyle(8, accent, 0.34);
+    for (let x = 80; x <= 900; x += 92) {
+      graphics.beginPath();
+      graphics.moveTo(x, 540);
+      graphics.lineTo(x + Math.sin(x) * 18, 410);
+      graphics.strokePath();
+    }
+  } else if (variant === "basalt" || variant === "storm") {
+    graphics.fillStyle(variant === "storm" ? 0x1f2c38 : 0x2c2f36, 0.5);
+    graphics.fillTriangle(60, 330, 180, 220, 310, 330);
+    graphics.fillTriangle(640, 330, 760, 205, 910, 330);
+  } else if (variant === "pearl") {
+    graphics.fillStyle(0xffffff, 0.4);
+    graphics.fillEllipse(710, 302, 150, 34);
+    graphics.fillEllipse(245, 318, 120, 28);
+  } else if (variant === "moon" || variant === "aurora") {
+    graphics.lineStyle(4, accent, 0.32);
+    for (let i = 0; i < 4; i += 1) {
+      graphics.beginPath();
+      graphics.moveTo(0, 130 + i * 30);
+      for (let x = 0; x <= 960; x += 90) {
+        graphics.lineTo(x, 130 + i * 30 + Math.sin(x * 0.02 + i) * 18);
+      }
+      graphics.strokePath();
+    }
+  } else if (variant === "glacier") {
+    graphics.fillStyle(0xffffff, 0.54);
+    graphics.fillTriangle(640, 330, 720, 248, 806, 330);
+    graphics.fillTriangle(160, 330, 225, 266, 292, 330);
+  } else if (variant === "trench") {
+    graphics.fillStyle(accent, 0.24);
+    for (let i = 0; i < 10; i += 1) {
+      graphics.fillCircle(110 + i * 84, 360 + (i % 3) * 34, 5 + (i % 2) * 3);
+    }
+  } else if (variant === "amber") {
+    graphics.fillStyle(0x5c7587, 0.34);
+    graphics.fillEllipse(180, 323, 190, 42);
+    graphics.fillEllipse(720, 320, 220, 44);
+  }
 }

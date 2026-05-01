@@ -119,12 +119,17 @@ export function getRareBoost(state: PlayerState): number {
   return (
     (state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.rareBoost ?? 0) : 0) +
     (getItem(state.equippedRodId)?.effect?.rareBoost ?? 0) +
-    (getItem(state.equippedBoatId)?.effect?.rareBoost ?? 0)
+    (getItem(state.equippedBoatId)?.effect?.rareBoost ?? 0) +
+    (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.rareBoost ?? 0) : 0)
   );
 }
 
 export function getLureSpeed(state: PlayerState): number {
-  return (getItem(state.equippedRodId)?.effect?.lureSpeed ?? 0) + (getItem(state.equippedBoatId)?.effect?.lureSpeed ?? 0);
+  return (
+    (getItem(state.equippedRodId)?.effect?.lureSpeed ?? 0) +
+    (state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.lureSpeed ?? 0) : 0) +
+    (getItem(state.equippedBoatId)?.effect?.lureSpeed ?? 0)
+  );
 }
 
 export function getReelPower(state: PlayerState): number {
@@ -132,11 +137,18 @@ export function getReelPower(state: PlayerState): number {
 }
 
 export function getMutationChance(state: PlayerState): number {
-  return (getItem(state.equippedRodId)?.effect?.mutationChance ?? 0) + (getItem(state.equippedBoatId)?.effect?.mutationChance ?? 0);
+  return (
+    (getItem(state.equippedRodId)?.effect?.mutationChance ?? 0) +
+    (getItem(state.equippedBoatId)?.effect?.mutationChance ?? 0) +
+    (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.mutationChance ?? 0) : 0)
+  );
 }
 
 export function getBoatSpeed(state: PlayerState): number {
-  return getItem(state.equippedBoatId)?.effect?.boatSpeed ?? 0;
+  return (
+    (getItem(state.equippedBoatId)?.effect?.boatSpeed ?? 0) +
+    (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.boatSpeed ?? 0) : 0)
+  );
 }
 
 export function stepProgress(state: PlayerState, step: QuestStep): number {

@@ -6,7 +6,7 @@ import type {
   StoryChoiceDefinition,
 } from "./types";
 
-export const fish: FishDefinition[] = [
+const baseFish: FishDefinition[] = [
   {
     id: "sunny-minnow",
     name: "햇살 송사리",
@@ -218,13 +218,159 @@ export const fish: FishDefinition[] = [
   },
 ];
 
-export const areas: AreaDefinition[] = [
+type ExtraAreaBlueprint = {
+  id: string;
+  name: string;
+  requiredLevel: number;
+  theme: AreaDefinition["theme"];
+  mapTexture: string;
+  flavor: string;
+  prefixes: readonly string[];
+  habitat: string;
+};
+
+const extraAreaBlueprints = [
+  {
+    id: "misty-fjord",
+    name: "안개 협만",
+    requiredLevel: 7,
+    theme: "mist",
+    mapTexture: "map-fjord",
+    flavor: "낮은 안개와 회색 절벽 사이로 잔잔한 물길이 이어져요.",
+    prefixes: ["안개", "은비늘", "자작", "서리", "물안개", "회청", "새벽", "유리", "숨결", "협만"],
+    habitat: "흐린 수면 아래",
+  },
+  {
+    id: "kelp-forest",
+    name: "해초 숲길",
+    requiredLevel: 9,
+    theme: "kelp",
+    mapTexture: "map-kelp",
+    flavor: "키 큰 해초가 물결을 따라 숲처럼 흔들리는 길이에요.",
+    prefixes: ["해초", "초록", "잎새", "비취", "숲그늘", "말미잘", "줄기", "연둣빛", "풀결", "해풍"],
+    habitat: "짙은 해초 줄기 사이",
+  },
+  {
+    id: "basalt-cove",
+    name: "현무암 후미",
+    requiredLevel: 11,
+    theme: "basalt",
+    mapTexture: "map-basalt",
+    flavor: "검은 바위와 하얀 포말이 강한 대비를 이루는 조용한 후미예요.",
+    prefixes: ["현무암", "흑요", "포말", "바위", "검푸른", "파편", "절벽", "먹빛", "소금", "그늘"],
+    habitat: "검은 바위 틈",
+  },
+  {
+    id: "pearl-lagoon",
+    name: "진주 석호",
+    requiredLevel: 13,
+    theme: "pearl",
+    mapTexture: "map-lagoon",
+    flavor: "얕은 물빛이 진주처럼 퍼지고 작은 모래톱이 반짝여요.",
+    prefixes: ["진주", "백사", "물빛", "조개", "분홍", "은모래", "흰물결", "비단", "석호", "윤슬"],
+    habitat: "따뜻한 모래톱 주변",
+  },
+  {
+    id: "storm-bank",
+    name: "먹구름 여울",
+    requiredLevel: 15,
+    theme: "storm",
+    mapTexture: "map-storm",
+    flavor: "멀리 천둥이 울리고 짙은 물결이 힘차게 부서지는 곳이에요.",
+    prefixes: ["먹구름", "천둥", "번개", "강풍", "비늘비", "먹물", "소용돌이", "폭우", "검파도", "바람"],
+    habitat: "거친 여울 가장자리",
+  },
+  {
+    id: "moonlit-current",
+    name: "달빛 조류",
+    requiredLevel: 17,
+    theme: "moon",
+    mapTexture: "map-moon",
+    flavor: "밤바다의 물길이 은색 띠처럼 흐르는 신비로운 해역이에요.",
+    prefixes: ["달빛", "은하", "초승", "별가루", "밤물", "자정", "달무리", "은조류", "몽환", "월영"],
+    habitat: "은색 조류 속",
+  },
+  {
+    id: "amber-archipelago",
+    name: "호박빛 군도",
+    requiredLevel: 19,
+    theme: "amber",
+    mapTexture: "map-amber",
+    flavor: "해질녘 섬 그림자와 호박빛 바다가 길게 이어지는 군도예요.",
+    prefixes: ["호박", "노을", "금귤", "석양", "황금", "따스한", "등대", "갈매빛", "귤빛", "해넘이"],
+    habitat: "노을 물든 얕은 암초",
+  },
+  {
+    id: "glacier-shelf",
+    name: "빙하 선반",
+    requiredLevel: 21,
+    theme: "glacier",
+    mapTexture: "map-glacier",
+    flavor: "맑고 차가운 물 위로 푸른 빙하 조각이 천천히 떠다녀요.",
+    prefixes: ["빙하", "서릿빛", "얼음", "청빙", "눈결", "차가운", "북극", "수정", "흰숨", "빙정"],
+    habitat: "투명한 얼음 그늘",
+  },
+  {
+    id: "lantern-trench",
+    name: "초롱 해구",
+    requiredLevel: 23,
+    theme: "trench",
+    mapTexture: "map-trench",
+    flavor: "깊은 바다의 작은 빛들이 길잡이처럼 깜박이는 해구예요.",
+    prefixes: ["초롱", "심해", "남빛", "등불", "그윽한", "흑청", "불씨", "고요", "깊은", "반딧"],
+    habitat: "작은 빛이 모인 깊은 물길",
+  },
+  {
+    id: "aurora-reef",
+    name: "오로라 외해초",
+    requiredLevel: 25,
+    theme: "aurora",
+    mapTexture: "map-aurora",
+    flavor: "먼 바다 산호 위로 오로라빛 물결이 춤추는 최고급 낚시터예요.",
+    prefixes: ["오로라", "극광", "무지개", "성운", "찬란한", "환상", "빛무리", "프리즘", "여명", "별빛"],
+    habitat: "오로라빛 산호 사이",
+  },
+] as const satisfies readonly ExtraAreaBlueprint[];
+
+const seaFriendSpecies = [
+  { slug: "drifter", name: "드리프터", rarity: "common", base: 36, xp: 26, weight: 34 },
+  { slug: "needlefish", name: "바늘고기", rarity: "common", base: 38, xp: 27, weight: 30 },
+  { slug: "veil-ray", name: "베일가오리", rarity: "uncommon", base: 52, xp: 36, weight: 18 },
+  { slug: "comet-squid", name: "혜성오징어", rarity: "uncommon", base: 58, xp: 39, weight: 16 },
+  { slug: "mosaic-crab", name: "모자이크게", rarity: "uncommon", base: 61, xp: 41, weight: 15 },
+  { slug: "lantern-eel", name: "등불장어", rarity: "rare", base: 82, xp: 55, weight: 9 },
+  { slug: "velvet-turtle", name: "벨벳거북", rarity: "rare", base: 88, xp: 58, weight: 8 },
+  { slug: "crown-clam", name: "왕관조개", rarity: "rare", base: 94, xp: 62, weight: 7 },
+  { slug: "skywhale", name: "하늘고래", rarity: "special", base: 128, xp: 82, weight: 4 },
+  { slug: "mythic-nudibranch", name: "환상갯민숭달팽이", rarity: "special", base: 140, xp: 88, weight: 3 },
+] as const;
+
+const generatedFish: FishDefinition[] = extraAreaBlueprints.flatMap((area, areaIndex) =>
+  seaFriendSpecies.map((species, speciesIndex) => ({
+    id: `${area.id}-${species.slug}`,
+    name: `${area.prefixes[speciesIndex]} ${species.name}`,
+    areaIds: [area.id],
+    rarity: species.rarity,
+    baseShells: species.base + areaIndex * 8 + speciesIndex * 2,
+    xp: species.xp + areaIndex * 5 + Math.floor(speciesIndex * 1.5),
+    spawnWeight: Math.max(2, species.weight - Math.floor(areaIndex / 3)),
+    funFact: `${area.name}의 ${area.habitat}에서 독특한 무늬를 뽐내는 바다 친구예요.`,
+    assetKey: `fish-${area.id}-${species.slug}`,
+  })),
+);
+
+export const fish: FishDefinition[] = [...baseFish, ...generatedFish];
+
+const baseAreas: AreaDefinition[] = [
   {
     id: "sunny-beach",
     name: "햇살 해변",
     requiredLevel: 1,
     fishIds: ["sunny-minnow", "bubble-flounder", "sand-shrimp", "peach-seahorse", "ribbon-squid", "moon-jelly"],
     backgroundKey: "bg-sunny-beach",
+    theme: "beach",
+    mapTexture: "map-island",
+    flavor: "따뜻한 모래와 얕은 물길이 처음 항해에 알맞아요.",
   },
   {
     id: "little-pier",
@@ -241,6 +387,9 @@ export const areas: AreaDefinition[] = [
       "starfish-pal",
     ],
     backgroundKey: "bg-little-pier",
+    theme: "pier",
+    mapTexture: "map-pier",
+    flavor: "낡은 목재 방파제 주변으로 항구 친구들이 모여요.",
   },
   {
     id: "coral-sea",
@@ -258,10 +407,26 @@ export const areas: AreaDefinition[] = [
       "rainbow-whale",
     ],
     backgroundKey: "bg-coral-sea",
+    theme: "coral",
+    mapTexture: "map-reef",
+    flavor: "산호와 따뜻한 조류가 희귀한 만남을 불러요.",
   },
 ];
 
-export const items: ItemDefinition[] = [
+const generatedAreas: AreaDefinition[] = extraAreaBlueprints.map((area) => ({
+  id: area.id,
+  name: area.name,
+  requiredLevel: area.requiredLevel,
+  fishIds: generatedFish.filter((entry) => entry.areaIds.includes(area.id)).map((entry) => entry.id),
+  backgroundKey: `bg-${area.id}`,
+  theme: area.theme,
+  mapTexture: area.mapTexture,
+  flavor: area.flavor,
+}));
+
+export const areas: AreaDefinition[] = [...baseAreas, ...generatedAreas];
+
+const baseItems: ItemDefinition[] = [
   {
     id: "twig-rod",
     name: "나뭇가지 낚싯대",
@@ -371,6 +536,110 @@ export const items: ItemDefinition[] = [
     shellCost: 80,
     description: "산호초를 지키겠다는 약속이 은은히 빛나요.",
   },
+];
+
+const gearThemes = [
+  { slug: "harbor", name: "항구", color: "단정한" },
+  { slug: "sunray", name: "햇살", color: "밝은" },
+  { slug: "reef", name: "산호", color: "따뜻한" },
+  { slug: "mist", name: "안개", color: "은은한" },
+  { slug: "kelp", name: "해초", color: "차분한" },
+  { slug: "basalt", name: "현무암", color: "묵직한" },
+  { slug: "pearl", name: "진주", color: "고운" },
+  { slug: "storm", name: "먹구름", color: "강한" },
+  { slug: "moon", name: "달빛", color: "맑은" },
+  { slug: "amber", name: "호박빛", color: "따뜻한" },
+  { slug: "glacier", name: "빙하", color: "서늘한" },
+  { slug: "lantern", name: "초롱", color: "깊은" },
+  { slug: "aurora", name: "오로라", color: "찬란한" },
+  { slug: "compass", name: "나침반", color: "정교한" },
+  { slug: "tide", name: "조류", color: "유려한" },
+] as const;
+
+const craftedLevels = ["수습", "견습", "단련", "숙련", "명장", "원정"] as const;
+
+const generatedRods: ItemDefinition[] = Array.from({ length: 30 }, (_, index) => {
+  const theme = gearThemes[index % gearThemes.length];
+  const level = Math.floor(index / 5);
+  const levelName = craftedLevels[level] ?? "원정";
+  return {
+    id: `${theme.slug}-${level + 1}-rod`,
+    name: `${theme.name} ${levelName} 낚싯대`,
+    kind: "rod",
+    shellCost: 150 + index * 58 + level * 70,
+    description: `${theme.color} 소재와 균형 잡힌 릴로 제작한 상급 낚싯대예요.`,
+    effect: {
+      catchEase: 0.1 + level * 0.025 + (index % 5) * 0.006,
+      lureSpeed: 0.12 + level * 0.03 + (index % 4) * 0.01,
+      reelPower: 0.04 + level * 0.018,
+      rareBoost: 0.02 + level * 0.018 + (index % 3) * 0.008,
+      mutationChance: level >= 2 ? 0.015 + level * 0.01 : undefined,
+    },
+  };
+});
+
+const generatedBoats: ItemDefinition[] = Array.from({ length: 30 }, (_, index) => {
+  const theme = gearThemes[(index + 2) % gearThemes.length];
+  const level = Math.floor(index / 5);
+  const className = ["소형선", "순항선", "탐사선", "쌍동선", "커터", "원양정"][level] ?? "원양정";
+  return {
+    id: `${theme.slug}-${level + 1}-boat`,
+    name: `${theme.name} ${className}`,
+    kind: "boat",
+    shellCost: 220 + index * 76 + level * 110,
+    description: `${theme.color} 선체 라인과 안정적인 갑판을 갖춘 항해용 배예요.`,
+    effect: {
+      boatSpeed: 0.12 + level * 0.055 + (index % 5) * 0.012,
+      catchEase: level >= 2 ? 0.015 + level * 0.008 : undefined,
+      lureSpeed: 0.025 + level * 0.012,
+      rareBoost: level >= 1 ? 0.018 + level * 0.012 : undefined,
+      mutationChance: level >= 4 ? 0.025 + level * 0.006 : undefined,
+    },
+  };
+});
+
+const generatedBaits: ItemDefinition[] = Array.from({ length: 30 }, (_, index) => {
+  const theme = gearThemes[(index + 5) % gearThemes.length];
+  const level = Math.floor(index / 5);
+  const baitKind = ["반죽", "젤리", "해초볼", "향낭", "진주캡슐", "별빛캡슐"][level] ?? "별빛캡슐";
+  return {
+    id: `${theme.slug}-${level + 1}-bait`,
+    name: `${theme.name} ${baitKind}`,
+    kind: "bait",
+    shellCost: 80 + index * 36 + level * 46,
+    description: `${theme.name} 해역의 향과 색을 담아 특정 친구들의 호기심을 끌어요.`,
+    effect: {
+      rareBoost: 0.16 + level * 0.06 + (index % 4) * 0.018,
+      lureSpeed: 0.03 + level * 0.012,
+      mutationChance: level >= 3 ? 0.02 + level * 0.009 : undefined,
+    },
+  };
+});
+
+const generatedFlags: ItemDefinition[] = Array.from({ length: 30 }, (_, index) => {
+  const theme = gearThemes[(index + 8) % gearThemes.length];
+  const level = Math.floor(index / 5);
+  const flagKind = ["삼각깃발", "분대기", "리본깃발", "문장기", "항해기", "왕실기"][level] ?? "왕실기";
+  return {
+    id: `${theme.slug}-${level + 1}-flag`,
+    name: `${theme.name} ${flagKind}`,
+    kind: "boatCosmetic",
+    shellCost: 70 + index * 32 + level * 52,
+    description: `${theme.color} 문양으로 배의 인상을 바꾸고 항해 보너스를 조금 더해요.`,
+    effect: {
+      boatSpeed: level >= 1 ? 0.015 + level * 0.006 : undefined,
+      rareBoost: 0.012 + level * 0.008,
+      mutationChance: level >= 4 ? 0.012 + level * 0.006 : undefined,
+    },
+  };
+});
+
+export const items: ItemDefinition[] = [
+  ...baseItems,
+  ...generatedRods,
+  ...generatedBoats,
+  ...generatedBaits,
+  ...generatedFlags,
 ];
 
 export const storyChoices: StoryChoiceDefinition[] = [

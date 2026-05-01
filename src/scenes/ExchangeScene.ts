@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { boatItemTint } from "../game/boat";
+import { boatCosmeticTint, boatItemTint } from "../game/boat";
 import { items } from "../game/content";
 import { PALETTE, TEXT } from "../game/palette";
 import { buyItem, canBuyItem, equipItem, refreshQuestCompletion } from "../game/progression";
@@ -131,13 +131,20 @@ export class ExchangeScene extends Phaser.Scene {
     if (item.kind === "rod") {
       icon.setTint(this.rodTint(item.id));
     }
+    if (item.kind === "bait") {
+      icon.setTint(this.gearTint(item.id));
+    }
+    if (item.kind === "boatCosmetic") {
+      icon.setTint(boatCosmeticTint(item.id));
+    }
 
     this.add
       .text(x - 110, y - 34, item.name, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "19px",
+        fontSize: item.name.length > 11 ? "16px" : "19px",
         fontStyle: "900",
         color: TEXT.primary,
+        wordWrap: { width: 194 },
       })
       .setOrigin(0, 0.5);
     this.add
@@ -225,7 +232,26 @@ export class ExchangeScene extends Phaser.Scene {
       case "aurora-rod":
         return PALETTE.lavender;
       default:
-        return PALETTE.driftwoodDark;
+        return this.gearTint(itemId);
     }
+  }
+
+  private gearTint(itemId: string) {
+    let hash = 0;
+    for (let i = 0; i < itemId.length; i += 1) {
+      hash = (hash * 31 + itemId.charCodeAt(i)) >>> 0;
+    }
+    const palette = [
+      PALETTE.driftwoodDark,
+      PALETTE.butter,
+      PALETTE.coralDeep,
+      PALETTE.lagoon,
+      PALETTE.lavender,
+      PALETTE.moss,
+      0xb9c3ff,
+      0xe0a253,
+      0x587281,
+    ];
+    return palette[hash % palette.length];
   }
 }

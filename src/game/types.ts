@@ -1,5 +1,29 @@
 export type Rarity = "common" | "uncommon" | "rare" | "special";
 
+export type AreaTheme =
+  | "beach"
+  | "pier"
+  | "coral"
+  | "mist"
+  | "kelp"
+  | "basalt"
+  | "pearl"
+  | "storm"
+  | "moon"
+  | "amber"
+  | "glacier"
+  | "trench"
+  | "aurora";
+
+export type CaptainStyle = {
+  presetId: string;
+  name: string;
+  skinTone: number;
+  hairTint: number;
+  outfitTint: number;
+  accentTint: number;
+};
+
 export type StoryCondition =
   | {
       kind: "questClaimed";
@@ -44,6 +68,9 @@ export type AreaDefinition = {
   requiredLevel: number;
   fishIds: string[];
   backgroundKey: string;
+  theme: AreaTheme;
+  mapTexture: string;
+  flavor: string;
 };
 
 export type ItemDefinition = {
@@ -122,11 +149,12 @@ export type QuestProgress = {
 };
 
 export type PlayerState = {
-  saveVersion: 2;
+  saveVersion: 3;
   shells: number;
   level: number;
   xp: number;
   collection: Record<string, number>;
+  captain: CaptainStyle;
   equippedRodId: string;
   equippedBaitId?: string;
   equippedBoatId: string;

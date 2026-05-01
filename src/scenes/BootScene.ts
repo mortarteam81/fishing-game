@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { areas, fish as fishContent } from "../game/content";
 import { PALETTE } from "../game/palette";
 
 export class BootScene extends Phaser.Scene {
@@ -45,6 +46,38 @@ export class BootScene extends Phaser.Scene {
       const g = this.make.graphics({ x: 0, y: 0 }, false);
       this.drawSeaCreature(g, shape, body, accent);
       g.generateTexture(key, 96, 68);
+      g.destroy();
+    }
+
+    const generatedShapes = [
+      "fish",
+      "flat",
+      "squid",
+      "crab",
+      "star",
+      "turtle",
+      "whale",
+      "jelly",
+      "seahorse",
+      "shrimp",
+      "ray",
+      "octopus",
+      "puffer",
+      "eel",
+      "clam",
+      "angler",
+      "slug",
+    ] as const;
+
+    for (const entry of fishContent) {
+      if (this.textures.exists(entry.assetKey)) {
+        continue;
+      }
+      const hash = this.hashString(entry.id);
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      const shape = generatedShapes[hash % generatedShapes.length];
+      this.drawSeaCreature(g, shape, this.colorFromHash(hash), this.colorFromHash(hash * 7 + 19));
+      g.generateTexture(entry.assetKey, 96, 68);
       g.destroy();
     }
   }
@@ -621,6 +654,13 @@ export class BootScene extends Phaser.Scene {
       reef.destroy();
     }
 
+    for (const area of areas) {
+      if (this.textures.exists(area.mapTexture)) {
+        continue;
+      }
+      this.createAreaMapTexture(area.mapTexture, area.theme);
+    }
+
     if (!this.textures.exists("sparkle-point")) {
       const sparkle = this.make.graphics({ x: 0, y: 0 }, false);
       sparkle.fillStyle(PALETTE.butter, 0.95);
@@ -633,6 +673,71 @@ export class BootScene extends Phaser.Scene {
       sparkle.generateTexture("sparkle-point", 64, 64);
       sparkle.destroy();
     }
+  }
+
+  private createAreaMapTexture(key: string, theme: string) {
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    const hash = this.hashString(key);
+    const body = this.colorFromHash(hash);
+    const accent = this.colorFromHash(hash * 5 + 11);
+
+    g.fillStyle(0x102f3f, 0.14);
+    g.fillEllipse(80, 100, 128, 28);
+    g.fillStyle(body, 0.95);
+
+    if (theme === "mist") {
+      g.fillEllipse(80, 78, 128, 54);
+      g.fillStyle(0xffffff, 0.46);
+      g.fillRoundedRect(22, 46, 116, 12, 6);
+      g.fillRoundedRect(38, 72, 92, 11, 6);
+    } else if (theme === "kelp") {
+      g.fillEllipse(80, 86, 118, 42);
+      g.lineStyle(8, accent, 0.82);
+      for (let x = 34; x <= 126; x += 18) {
+        g.beginPath();
+        g.moveTo(x, 96);
+        g.lineTo(x + Math.sin(x) * 10, 36);
+        g.strokePath();
+      }
+    } else if (theme === "basalt" || theme === "storm") {
+      g.fillTriangle(20, 96, 64, 32, 108, 96);
+      g.fillTriangle(64, 100, 112, 26, 150, 100);
+      g.fillStyle(accent, 0.9);
+      g.fillEllipse(80, 102, 120, 18);
+    } else if (theme === "pearl") {
+      g.fillEllipse(80, 84, 132, 56);
+      g.fillStyle(0xffffff, 0.76);
+      g.fillCircle(72, 72, 18);
+      g.fillCircle(104, 83, 12);
+    } else if (theme === "moon" || theme === "aurora") {
+      g.fillEllipse(80, 86, 118, 50);
+      g.fillStyle(accent, 0.64);
+      g.fillCircle(112, 48, 18);
+      g.lineStyle(4, 0xffffff, 0.36);
+      g.lineBetween(28, 78, 132, 61);
+      g.lineBetween(34, 94, 126, 82);
+    } else if (theme === "glacier") {
+      g.fillTriangle(28, 98, 66, 34, 98, 98);
+      g.fillTriangle(78, 100, 112, 42, 146, 100);
+      g.fillStyle(0xffffff, 0.58);
+      g.fillTriangle(66, 34, 76, 70, 50, 70);
+    } else if (theme === "trench") {
+      g.fillEllipse(80, 88, 126, 58);
+      g.fillStyle(accent, 0.86);
+      for (let i = 0; i < 7; i += 1) {
+        g.fillCircle(36 + i * 15, 73 + (i % 3) * 8, 4);
+      }
+    } else {
+      g.fillEllipse(80, 84, 132, 52);
+      g.fillStyle(accent, 0.72);
+      g.fillCircle(54, 70, 18);
+      g.fillCircle(108, 82, 24);
+    }
+
+    g.lineStyle(4, PALETTE.ink, 0.2);
+    g.strokeEllipse(80, 88, 130, 56);
+    g.generateTexture(key, 160, 128);
+    g.destroy();
   }
 
   private createUiIcons() {
@@ -770,6 +875,32 @@ export class BootScene extends Phaser.Scene {
     draw(g);
     g.generateTexture(key, 64, 64);
     g.destroy();
+  }
+
+  private hashString(value: string) {
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+  }
+
+  private colorFromHash(hash: number) {
+    const palette = [
+      PALETTE.seaGlass,
+      PALETTE.lagoon,
+      PALETTE.coral,
+      PALETTE.coralDeep,
+      PALETTE.butter,
+      PALETTE.lavender,
+      PALETTE.moss,
+      0x8bd7ef,
+      0xffb56f,
+      0x92d7d3,
+      0xb9c3ff,
+      0xf0ead8,
+    ];
+    return palette[hash % palette.length];
   }
 
   private fillStar(

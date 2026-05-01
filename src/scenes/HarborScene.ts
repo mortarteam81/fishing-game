@@ -85,9 +85,16 @@ export class HarborScene extends Phaser.Scene {
       iconScale: 0.5,
     });
 
-    areas.forEach((area, index) => {
+    const farthestUnlocked = Math.max(
+      0,
+      ...areas.map((area, index) => (this.state.unlockedAreaIds.includes(area.id) ? index : -1)),
+    );
+    const startIndex = Phaser.Math.Clamp(farthestUnlocked - 1, 0, Math.max(0, areas.length - 4));
+    const voyageAreas = areas.slice(startIndex, startIndex + 4);
+
+    voyageAreas.forEach((area, index) => {
       const unlocked = this.state.unlockedAreaIds.includes(area.id);
-      const x = 410 + index * 172;
+      const x = 390 + index * 146;
       const label = unlocked ? area.name : `Lv.${area.requiredLevel} 열림`;
       addTextButton(
         this,
@@ -96,9 +103,9 @@ export class HarborScene extends Phaser.Scene {
         label,
         () => this.scene.start("Fishing", { areaId: area.id }),
         {
-          width: 152,
+          width: 132,
           height: 54,
-          fontSize: 17,
+          fontSize: 15,
           fill: unlocked ? PALETTE.butter : PALETTE.disabled,
           disabled: !unlocked,
           iconKey: unlocked ? "icon-bait" : undefined,
@@ -156,23 +163,40 @@ export class HarborScene extends Phaser.Scene {
   }
 
   private addNavigation() {
-    addTextButton(this, 505, 265, "도감", () => this.scene.start("Collection"), {
-      width: 150,
+    addTextButton(this, 390, 265, "도감", () => this.scene.start("Collection"), {
+      width: 112,
+      fontSize: 18,
       fill: PALETTE.seaFoam,
       iconKey: "icon-collection",
-      iconScale: 0.38,
+      iconScale: 0.32,
     });
-    addTextButton(this, 675, 265, "교환소", () => this.scene.start("Exchange"), {
-      width: 150,
+    addTextButton(this, 512, 265, "교환소", () => this.scene.start("Exchange"), {
+      width: 112,
+      fontSize: 17,
       fill: 0xffc2d1,
       iconKey: "icon-shop",
-      iconScale: 0.38,
+      iconScale: 0.32,
     });
-    addTextButton(this, 845, 265, "퀘스트", () => this.scene.start("Quest"), {
-      width: 150,
+    addTextButton(this, 634, 265, "퀘스트", () => this.scene.start("Quest"), {
+      width: 112,
+      fontSize: 17,
       fill: PALETTE.lavender,
       iconKey: "icon-quest",
-      iconScale: 0.38,
+      iconScale: 0.32,
+    });
+    addTextButton(this, 756, 265, "선장", () => this.scene.start("Character"), {
+      width: 112,
+      fontSize: 18,
+      fill: PALETTE.butter,
+      iconKey: "icon-harbor",
+      iconScale: 0.32,
+    });
+    addTextButton(this, 878, 265, "저장", () => this.scene.start("Save"), {
+      width: 112,
+      fontSize: 18,
+      fill: PALETTE.seaFoam,
+      iconKey: "icon-map",
+      iconScale: 0.32,
     });
   }
 }

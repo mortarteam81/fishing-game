@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { addPlayerBoat, boatWakeTint } from "../game/boat";
-import { getArea } from "../game/content";
+import { areas, fish } from "../game/content";
 import { PALETTE, TEXT } from "../game/palette";
 import { playSoftTone } from "../game/audio";
 import { getBoatSpeed } from "../game/progression";
@@ -16,32 +16,35 @@ type Hotspot = {
   label: string;
 };
 
-const WORLD_WIDTH = 1760;
-const WORLD_HEIGHT = 1120;
+const WORLD_WIDTH = 2680;
+const WORLD_HEIGHT = 1780;
 
-const hotspots: Hotspot[] = [
-  {
-    area: getArea("sunny-beach")!,
-    x: 430,
-    y: 760,
-    texture: "map-island",
-    label: "잔잔한 햇살 해변",
-  },
-  {
-    area: getArea("little-pier")!,
-    x: 1060,
-    y: 470,
-    texture: "map-pier",
-    label: "작은 방파제",
-  },
-  {
-    area: getArea("coral-sea")!,
-    x: 1410,
-    y: 805,
-    texture: "map-reef",
-    label: "산호초 바다",
-  },
-];
+const hotspotLayout = [
+  [430, 1280],
+  [930, 900],
+  [1430, 1260],
+  [540, 540],
+  [1180, 430],
+  [1840, 620],
+  [2160, 1090],
+  [1640, 1540],
+  [820, 1530],
+  [2340, 420],
+  [2460, 1490],
+  [1320, 1040],
+  [2040, 1580],
+] as const;
+
+const hotspots: Hotspot[] = areas.map((area, index) => {
+  const point = hotspotLayout[index] ?? [420 + (index % 5) * 460, 420 + Math.floor(index / 5) * 420];
+  return {
+    area,
+    x: point[0],
+    y: point[1],
+    texture: area.mapTexture,
+    label: area.name,
+  };
+});
 
 export class OceanScene extends Phaser.Scene {
   private state!: PlayerState;
@@ -142,6 +145,27 @@ export class OceanScene extends Phaser.Scene {
         ease: "Sine.inOut",
       });
     }
+
+    hotspots.slice(3).forEach((hotspot, index) => {
+      const friendDefinition = fish.find((entry) => hotspot.area.fishIds.includes(entry.id));
+      if (!friendDefinition) {
+        return;
+      }
+      const friend = this.add
+        .image(hotspot.x + (index % 2 === 0 ? 96 : -112), hotspot.y + 76, friendDefinition.assetKey)
+        .setScale(0.38 + (index % 4) * 0.04)
+        .setDepth(4)
+        .setAlpha(0.48);
+      this.tweens.add({
+        targets: friend,
+        x: friend.x + (index % 2 === 0 ? 34 : -34),
+        y: friend.y - 18,
+        duration: 2400 + index * 120,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
+    });
   }
 
   private animateSea(delta: number) {
@@ -202,12 +226,10 @@ export class OceanScene extends Phaser.Scene {
     const route = this.add.graphics().setDepth(2);
     route.lineStyle(4, PALETTE.white, 0.26);
     route.beginPath();
-    route.moveTo(220, 820);
-    route.lineTo(430, 690);
-    route.lineTo(820, 580);
-    route.lineTo(1060, 380);
-    route.lineTo(1250, 620);
-    route.lineTo(1410, 700);
+    route.moveTo(230, 850);
+    for (const hotspot of hotspots) {
+      route.lineTo(hotspot.x, hotspot.y - 92);
+    }
     route.strokePath();
 
     for (const point of [
@@ -216,6 +238,9 @@ export class OceanScene extends Phaser.Scene {
       [1260, 270],
       [1540, 980],
       [800, 950],
+      [2140, 230],
+      [2240, 1340],
+      [520, 1500],
     ] as const) {
       const cloud = this.add.graphics().setDepth(3);
       cloud.fillStyle(PALETTE.white, 0.32);

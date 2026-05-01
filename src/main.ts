@@ -2,12 +2,14 @@ import Phaser from "phaser";
 import "./style.css";
 import { BootScene } from "./scenes/BootScene";
 import { CatchResultScene } from "./scenes/CatchResultScene";
+import { CharacterScene } from "./scenes/CharacterScene";
 import { CollectionScene } from "./scenes/CollectionScene";
 import { ExchangeScene } from "./scenes/ExchangeScene";
 import { FishingScene } from "./scenes/FishingScene";
 import { HarborScene } from "./scenes/HarborScene";
 import { OceanScene } from "./scenes/OceanScene";
 import { QuestScene } from "./scenes/QuestScene";
+import { SaveScene } from "./scenes/SaveScene";
 
 const parent = document.querySelector<HTMLElement>("#app");
 
@@ -39,6 +41,8 @@ if (!parent) {
       CollectionScene,
       ExchangeScene,
       QuestScene,
+      CharacterScene,
+      SaveScene,
     ],
   });
 }

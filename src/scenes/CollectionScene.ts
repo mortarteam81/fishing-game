@@ -60,9 +60,10 @@ export class CollectionScene extends Phaser.Scene {
       this.add
         .text(x - 25, y - 28, count > 0 ? entry.name : "아직 못 만났어요", {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-          fontSize: "20px",
+          fontSize: entry.name.length > 10 ? "16px" : "20px",
           fontStyle: "800",
           color: count > 0 ? TEXT.primary : TEXT.disabled,
+          wordWrap: { width: 150 },
         })
         .setOrigin(0, 0.5);
       this.add

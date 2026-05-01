@@ -39,19 +39,20 @@ export class FishingScene extends Phaser.Scene {
   create() {
     this.state = loadGame();
     const area = getArea(this.areaId);
-    const variant = this.areaId === "coral-sea" ? "coral" : this.areaId === "little-pier" ? "pier" : "beach";
+    const variant = area?.theme ?? "beach";
     addOceanBackground(this, variant);
     addHeader(this, area?.name ?? "낚시터", this.state);
     addMuteButton(this);
 
     this.addFishingSetPiece();
     this.add
-      .text(480, 118, "물결이 반짝이면 버튼을 눌러요.", {
+      .text(480, 118, area?.flavor ?? "물결이 반짝이면 버튼을 눌러요.", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "28px",
+        fontSize: "23px",
         fontStyle: "800",
         color: TEXT.primary,
         align: "center",
+        wordWrap: { width: 760 },
       })
       .setOrigin(0.5);
 
@@ -267,9 +268,9 @@ export class FishingScene extends Phaser.Scene {
   }
 
   private addFishingSetPiece() {
-    const landmark =
-      this.areaId === "coral-sea" ? "map-reef" : this.areaId === "little-pier" ? "map-pier" : "map-island";
-    this.add.image(738, 308, landmark).setScale(this.areaId === "little-pier" ? 1.05 : 0.92).setAlpha(0.86);
+    const area = getArea(this.areaId);
+    const landmark = area?.mapTexture ?? "map-island";
+    this.add.image(738, 308, landmark).setScale(area?.theme === "pier" ? 1.05 : 0.92).setAlpha(0.86);
     addPlayerBoat(this, 210, 284, this.state, { scale: 0.98, depth: 5 });
 
     const line = this.add.graphics();
@@ -338,7 +339,7 @@ export class FishingScene extends Phaser.Scene {
       case "aurora-rod":
         return PALETTE.lavender;
       default:
-        return PALETTE.inkSoft;
+        return this.colorFromId(this.state.equippedRodId);
     }
   }
 
@@ -348,7 +349,25 @@ export class FishingScene extends Phaser.Scene {
       case "aurora-rod":
         return 5;
       default:
-        return 4;
+        return this.state.equippedRodId.includes("-5-") || this.state.equippedRodId.includes("-6-") ? 5 : 4;
     }
+  }
+
+  private colorFromId(id: string) {
+    let hash = 0;
+    for (let i = 0; i < id.length; i += 1) {
+      hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+    }
+    const palette = [
+      PALETTE.inkSoft,
+      PALETTE.butter,
+      PALETTE.coralDeep,
+      PALETTE.lagoon,
+      PALETTE.lavender,
+      PALETTE.moss,
+      0xb9c3ff,
+      0xe0a253,
+    ];
+    return palette[hash % palette.length];
   }
 }

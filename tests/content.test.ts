@@ -6,7 +6,8 @@ describe("content data", () => {
     const fishIds = new Set(fish.map((entry) => entry.id));
     const areaIds = new Set(areas.map((entry) => entry.id));
 
-    expect(fish).toHaveLength(19);
+    expect(fish).toHaveLength(119);
+    expect(areas).toHaveLength(13);
     expect(fishIds.size).toBe(fish.length);
 
     for (const area of areas) {
@@ -32,6 +33,10 @@ describe("content data", () => {
     const questIds = new Set(quests.map((entry) => entry.id));
 
     expect(itemIds.size).toBe(items.length);
+    expect(items.filter((item) => item.kind === "rod")).toHaveLength(35);
+    expect(items.filter((item) => item.kind === "boat")).toHaveLength(34);
+    expect(items.filter((item) => item.kind === "bait")).toHaveLength(32);
+    expect(items.filter((item) => item.kind === "boatCosmetic")).toHaveLength(33);
     expect(questIds.size).toBe(quests.length);
 
     for (const quest of quests) {
