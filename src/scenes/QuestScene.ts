@@ -1,8 +1,8 @@
 import Phaser from "phaser";
-import { quests } from "../game/content";
 import { PALETTE, TEXT } from "../game/palette";
 import {
   claimQuest,
+  getVisibleQuests,
   refreshQuestCompletion,
   stepLabel,
   stepProgress,
@@ -26,7 +26,7 @@ export class QuestScene extends Phaser.Scene {
     addHeader(this, "오늘의 부탁", this.state);
     addMuteButton(this);
 
-    quests.forEach((quest, index) => this.addQuestRow(quest, index));
+    getVisibleQuests(this.state).forEach((quest, index) => this.addQuestRow(quest, index));
 
     addTextButton(this, 92, 500, "항구", () => this.scene.start("Harbor"), {
       width: 120,

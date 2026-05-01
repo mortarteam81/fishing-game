@@ -1,5 +1,13 @@
-import { areas, fish, getFish, getItem, items, quests } from "./content";
-import type { PlayerState, QuestDefinition, QuestStep } from "./types";
+import { areas, fish, getFish, getItem, getStoryChoice, items, quests, storyChoices } from "./content";
+import type {
+  PlayerState,
+  QuestDefinition,
+  QuestStep,
+  StoryChoiceDefinition,
+  StoryCondition,
+  StoryEffect,
+  StoryRewards,
+} from "./types";
 
 export const xpForLevel = (level: number) => 45 + (level - 1) * 35;
 
@@ -70,6 +78,8 @@ export function buyItem(state: PlayerState, itemId: string): PlayerState {
     ownedItemIds,
     equippedRodId: item.kind === "rod" ? item.id : state.equippedRodId,
     equippedBaitId: item.kind === "bait" ? item.id : state.equippedBaitId,
+    equippedBoatId: item.kind === "boat" ? item.id : state.equippedBoatId,
+    equippedBoatCosmeticId: item.kind === "boatCosmetic" ? item.id : state.equippedBoatCosmeticId,
     unlockedAreaIds: item.effect?.areaUnlock
       ? Array.from(new Set([...state.unlockedAreaIds, item.effect.areaUnlock]))
       : state.unlockedAreaIds,
@@ -90,15 +100,43 @@ export function equipItem(state: PlayerState, itemId: string): PlayerState {
     return { ...state, equippedBaitId: itemId };
   }
 
+  if (item.kind === "boat") {
+    return { ...state, equippedBoatId: itemId };
+  }
+
+  if (item.kind === "boatCosmetic") {
+    return { ...state, equippedBoatCosmeticId: itemId };
+  }
+
   return state;
 }
 
 export function getRodEase(state: PlayerState): number {
-  return getItem(state.equippedRodId)?.effect?.catchEase ?? 0;
+  return (getItem(state.equippedRodId)?.effect?.catchEase ?? 0) + (getItem(state.equippedBoatId)?.effect?.catchEase ?? 0);
 }
 
 export function getRareBoost(state: PlayerState): number {
-  return state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.rareBoost ?? 0) : 0;
+  return (
+    (state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.rareBoost ?? 0) : 0) +
+    (getItem(state.equippedRodId)?.effect?.rareBoost ?? 0) +
+    (getItem(state.equippedBoatId)?.effect?.rareBoost ?? 0)
+  );
+}
+
+export function getLureSpeed(state: PlayerState): number {
+  return (getItem(state.equippedRodId)?.effect?.lureSpeed ?? 0) + (getItem(state.equippedBoatId)?.effect?.lureSpeed ?? 0);
+}
+
+export function getReelPower(state: PlayerState): number {
+  return getItem(state.equippedRodId)?.effect?.reelPower ?? 0;
+}
+
+export function getMutationChance(state: PlayerState): number {
+  return (getItem(state.equippedRodId)?.effect?.mutationChance ?? 0) + (getItem(state.equippedBoatId)?.effect?.mutationChance ?? 0);
+}
+
+export function getBoatSpeed(state: PlayerState): number {
+  return getItem(state.equippedBoatId)?.effect?.boatSpeed ?? 0;
 }
 
 export function stepProgress(state: PlayerState, step: QuestStep): number {
@@ -159,10 +197,35 @@ export function isQuestComplete(state: PlayerState, quest: QuestDefinition): boo
   return quest.steps.every((step) => stepProgress(state, step) >= stepTarget(step));
 }
 
+export function conditionMet(state: PlayerState, condition: StoryCondition): boolean {
+  switch (condition.kind) {
+    case "questClaimed":
+      return state.questProgress[condition.questId]?.claimed === true;
+    case "storyFlag":
+      return (state.storyFlags[condition.flag] ?? false) === (condition.value ?? true);
+    case "notStoryFlag":
+      return !state.storyFlags[condition.flag];
+  }
+}
+
+export function requirementsMet(state: PlayerState, requirements: StoryCondition[] = []): boolean {
+  return requirements.every((condition) => conditionMet(state, condition));
+}
+
+export function getVisibleQuests(state: PlayerState): QuestDefinition[] {
+  return quests.filter((quest) => requirementsMet(state, quest.requirements));
+}
+
+export function getAvailableStoryChoices(state: PlayerState): StoryChoiceDefinition[] {
+  return storyChoices.filter(
+    (choice) => !state.choiceHistory[choice.id] && requirementsMet(state, choice.requirements),
+  );
+}
+
 export function refreshQuestCompletion(state: PlayerState): PlayerState {
   const questProgress = { ...state.questProgress };
 
-  for (const quest of quests) {
+  for (const quest of getVisibleQuests(state)) {
     const current = questProgress[quest.id] ?? { completed: false, claimed: false };
     questProgress[quest.id] = {
       ...current,
@@ -176,7 +239,7 @@ export function refreshQuestCompletion(state: PlayerState): PlayerState {
 export function claimQuest(state: PlayerState, questId: string): PlayerState {
   const quest = quests.find((entry) => entry.id === questId);
   const progress = state.questProgress[questId];
-  if (!quest || !progress?.completed || progress.claimed) {
+  if (!quest || !requirementsMet(state, quest.requirements) || !progress?.completed || progress.claimed) {
     return state;
   }
 
@@ -189,27 +252,97 @@ export function claimQuest(state: PlayerState, questId: string): PlayerState {
     },
   };
 
-  if (quest.rewards.itemId) {
-    const rewardItem = items.find((item) => item.id === quest.rewards.itemId);
-    if (rewardItem && !next.ownedItemIds.includes(rewardItem.id)) {
-      next = {
-        ...next,
-        ownedItemIds: [...next.ownedItemIds, rewardItem.id],
-      };
-    }
-  }
+  next = grantStoryRewards(next, quest.rewards);
+  next = applyStoryEffect(next, quest.effects);
 
   return addXp(next, quest.rewards.xp ?? 0);
 }
 
+export function applyStoryChoice(
+  state: PlayerState,
+  choiceId: string,
+  optionId: string,
+): PlayerState {
+  const choice = getStoryChoice(choiceId);
+  if (!choice || state.choiceHistory[choiceId] || !requirementsMet(state, choice.requirements)) {
+    return state;
+  }
+
+  const option = choice.options.find((entry) => entry.id === optionId);
+  if (!option) {
+    return state;
+  }
+
+  let next: PlayerState = {
+    ...state,
+    shells: state.shells + (option.rewards?.shells ?? 0),
+    choiceHistory: {
+      ...state.choiceHistory,
+      [choiceId]: option.id,
+    },
+    storyFlags: {
+      ...state.storyFlags,
+      ...Object.fromEntries(option.setFlags.map((flag) => [flag, true])),
+    },
+  };
+
+  next = grantStoryRewards(next, option.rewards);
+  next = addXp(next, option.rewards?.xp ?? 0);
+  return refreshQuestCompletion(next);
+}
+
+export function choiceOptionLabel(choice: StoryChoiceDefinition, optionId?: string): string {
+  return choice.options.find((option) => option.id === optionId)?.label ?? "아직 정하지 않았어요";
+}
+
 export function nextQuestHint(state: PlayerState): string {
-  const quest = quests.find((entry) => !state.questProgress[entry.id]?.claimed);
+  const choice = getAvailableStoryChoices(state)[0];
+  if (choice) {
+    return choice.helper;
+  }
+
+  const quest = getVisibleQuests(state).find((entry) => !state.questProgress[entry.id]?.claimed);
   if (!quest) {
     return "오늘도 바다 친구들을 천천히 만나봐요.";
   }
 
   const done = isQuestComplete(state, quest);
   return done ? `${quest.title} 보상을 받을 수 있어요!` : quest.helper;
+}
+
+function grantStoryRewards(state: PlayerState, rewards?: StoryRewards): PlayerState {
+  if (!rewards?.itemId) {
+    return state;
+  }
+
+  const rewardItem = items.find((item) => item.id === rewards.itemId);
+  if (!rewardItem || state.ownedItemIds.includes(rewardItem.id)) {
+    return state;
+  }
+
+  return {
+    ...state,
+    ownedItemIds: [...state.ownedItemIds, rewardItem.id],
+    equippedBoatId:
+      rewardItem.kind === "boat" ? rewardItem.id : state.equippedBoatId,
+    equippedBoatCosmeticId:
+      rewardItem.kind === "boatCosmetic" ? rewardItem.id : state.equippedBoatCosmeticId,
+  };
+}
+
+function applyStoryEffect(state: PlayerState, effect?: StoryEffect): PlayerState {
+  if (!effect) {
+    return state;
+  }
+
+  return {
+    ...state,
+    storyFlags: {
+      ...state.storyFlags,
+      ...Object.fromEntries((effect.setFlags ?? []).map((flag) => [flag, true])),
+    },
+    unlockedAreaIds: Array.from(new Set([...state.unlockedAreaIds, ...(effect.unlockAreaIds ?? [])])),
+  };
 }
 
 export { fish };

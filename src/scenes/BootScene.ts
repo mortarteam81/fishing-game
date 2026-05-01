@@ -277,32 +277,184 @@ export class BootScene extends Phaser.Scene {
   }
 
   private createBoatTexture() {
-    if (this.textures.exists("boat")) {
+    if (!this.textures.exists("boat-shadow")) {
+      const shadow = this.make.graphics({ x: 0, y: 0 }, false);
+      shadow.fillStyle(0x102f3f, 0.2);
+      shadow.fillEllipse(115, 28, 188, 24);
+      shadow.generateTexture("boat-shadow", 230, 56);
+      shadow.destroy();
+    }
+
+    if (!this.textures.exists("boat-hull")) {
+      const hull = this.make.graphics({ x: 0, y: 0 }, false);
+      const hullShape = [
+        new Phaser.Math.Vector2(18, 66),
+        new Phaser.Math.Vector2(208, 66),
+        new Phaser.Math.Vector2(188, 103),
+        new Phaser.Math.Vector2(44, 108),
+        new Phaser.Math.Vector2(28, 94),
+      ];
+      hull.fillStyle(0x0f2f3d, 0.18);
+      hull.fillEllipse(116, 104, 172, 18);
+      hull.fillStyle(0x254f61, 1);
+      hull.fillPoints(hullShape, true);
+      hull.fillStyle(0x17384a, 0.86);
+      hull.fillPoints(
+        [
+          new Phaser.Math.Vector2(34, 84),
+          new Phaser.Math.Vector2(194, 80),
+          new Phaser.Math.Vector2(184, 100),
+          new Phaser.Math.Vector2(48, 104),
+        ],
+        true,
+      );
+      hull.fillStyle(0xd9c4a3, 1);
+      hull.fillRect(43, 58, 126, 9);
+      hull.fillStyle(0x8c6d4e, 1);
+      for (let x = 52; x <= 143; x += 23) {
+        hull.fillRect(x, 59, 13, 6);
+      }
+      hull.fillStyle(0xf0ead8, 1);
+      hull.fillRoundedRect(82, 36, 58, 28, 5);
+      hull.fillStyle(0x224a5f, 0.92);
+      hull.fillRoundedRect(91, 42, 16, 11, 3);
+      hull.fillRoundedRect(113, 42, 16, 11, 3);
+      hull.lineStyle(5, PALETTE.ink, 0.32);
+      hull.beginPath();
+      hull.moveTo(hullShape[0].x, hullShape[0].y);
+      for (const point of hullShape.slice(1)) {
+        hull.lineTo(point.x, point.y);
+      }
+      hull.closePath();
+      hull.strokePath();
+      hull.lineStyle(2, PALETTE.white, 0.44);
+      hull.lineBetween(42, 70, 187, 68);
+      hull.lineStyle(3, 0x0f2f3d, 0.32);
+      hull.lineBetween(71, 36, 152, 36);
+      hull.generateTexture("boat-hull", 230, 118);
+      hull.destroy();
+    }
+
+    if (!this.textures.exists("boat-sail")) {
+      const sail = this.make.graphics({ x: 0, y: 0 }, false);
+      sail.lineStyle(5, PALETTE.ink, 0.34);
+      sail.lineBetween(43, 9, 43, 91);
+      sail.lineStyle(3, PALETTE.ink, 0.28);
+      sail.lineBetween(43, 22, 93, 40);
+      sail.lineBetween(43, 48, 98, 73);
+      sail.fillStyle(0xf0ead8, 1);
+      sail.fillRoundedRect(58, 49, 54, 32, 4);
+      sail.fillStyle(0xd8e8ea, 1);
+      sail.fillRoundedRect(64, 54, 18, 13, 2);
+      sail.fillRoundedRect(87, 54, 15, 13, 2);
+      sail.fillStyle(0xc64f52, 0.92);
+      sail.fillRect(54, 80, 64, 6);
+      sail.lineStyle(3, PALETTE.ink, 0.22);
+      sail.strokeRoundedRect(58, 49, 54, 32, 4);
+      sail.lineStyle(2, PALETTE.white, 0.55);
+      sail.lineBetween(65, 50, 106, 50);
+      sail.generateTexture("boat-sail", 128, 112);
+      sail.destroy();
+    }
+
+    if (!this.textures.exists("boat-map")) {
+      const mapBoat = this.make.graphics({ x: 0, y: 0 }, false);
+      const deck = [
+        new Phaser.Math.Vector2(54, 8),
+        new Phaser.Math.Vector2(83, 53),
+        new Phaser.Math.Vector2(70, 104),
+        new Phaser.Math.Vector2(38, 104),
+        new Phaser.Math.Vector2(25, 53),
+      ];
+      mapBoat.fillStyle(0x102f3f, 0.16);
+      mapBoat.fillEllipse(54, 67, 50, 86);
+      mapBoat.fillStyle(0x254f61, 1);
+      mapBoat.fillPoints(deck, true);
+      mapBoat.fillStyle(0xd9c4a3, 1);
+      mapBoat.fillRoundedRect(43, 42, 22, 35, 4);
+      mapBoat.fillStyle(0xf0ead8, 1);
+      mapBoat.fillRoundedRect(42, 25, 25, 17, 3);
+      mapBoat.lineStyle(4, PALETTE.ink, 0.26);
+      mapBoat.beginPath();
+      mapBoat.moveTo(deck[0].x, deck[0].y);
+      for (const point of deck.slice(1)) {
+        mapBoat.lineTo(point.x, point.y);
+      }
+      mapBoat.closePath();
+      mapBoat.strokePath();
+      mapBoat.generateTexture("boat-map", 108, 118);
+      mapBoat.destroy();
+    }
+
+    this.createBoatFlagTexture("boat-flag-star", PALETTE.coral, PALETTE.butter);
+    this.createBoatFlagTexture("boat-flag-harbor", PALETTE.deepLagoon, PALETTE.seaFoam);
+    this.createBoatFlagTexture("boat-flag-coral", PALETTE.coralDeep, PALETTE.lavender);
+
+    if (!this.textures.exists("boat")) {
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      const hullShape = [
+        new Phaser.Math.Vector2(18, 82),
+        new Phaser.Math.Vector2(208, 82),
+        new Phaser.Math.Vector2(188, 119),
+        new Phaser.Math.Vector2(44, 124),
+        new Phaser.Math.Vector2(28, 110),
+      ];
+      g.fillStyle(0x102f3f, 0.16);
+      g.fillEllipse(116, 123, 188, 24);
+      g.lineStyle(5, PALETTE.ink, 0.34);
+      g.lineBetween(68, 19, 68, 99);
+      g.lineStyle(3, PALETTE.ink, 0.28);
+      g.lineBetween(68, 31, 118, 49);
+      g.lineBetween(68, 57, 123, 82);
+      g.fillStyle(0xf0ead8, 1);
+      g.fillRoundedRect(83, 64, 54, 32, 4);
+      g.fillStyle(0xd8e8ea, 1);
+      g.fillRoundedRect(90, 69, 18, 13, 2);
+      g.fillRoundedRect(113, 69, 15, 13, 2);
+      g.fillStyle(0xc64f52, 0.92);
+      g.fillRect(79, 95, 64, 6);
+      g.fillStyle(0x254f61, 1);
+      g.fillPoints(hullShape, true);
+      g.fillStyle(0x17384a, 0.86);
+      g.fillPoints(
+        [
+          new Phaser.Math.Vector2(34, 100),
+          new Phaser.Math.Vector2(194, 96),
+          new Phaser.Math.Vector2(184, 116),
+          new Phaser.Math.Vector2(48, 120),
+        ],
+        true,
+      );
+      g.fillStyle(0xd9c4a3, 1);
+      g.fillRect(43, 74, 126, 9);
+      g.lineStyle(5, PALETTE.ink, 0.32);
+      g.beginPath();
+      g.moveTo(hullShape[0].x, hullShape[0].y);
+      for (const point of hullShape.slice(1)) {
+        g.lineTo(point.x, point.y);
+      }
+      g.closePath();
+      g.strokePath();
+      g.generateTexture("boat", 230, 140);
+      g.destroy();
+    }
+  }
+
+  private createBoatFlagTexture(key: string, fill: number, accent: number) {
+    if (this.textures.exists(key)) {
       return;
     }
-    const g = this.make.graphics({ x: 0, y: 0 }, false);
-    g.fillStyle(0xffffff, 0.25);
-    g.fillEllipse(83, 78, 132, 20);
-    g.fillStyle(PALETTE.driftwoodDark, 1);
-    g.fillRoundedRect(12, 55, 136, 32, 16);
-    g.fillStyle(PALETTE.driftwood, 1);
-    g.fillRoundedRect(20, 50, 118, 24, 13);
-    g.fillStyle(0xc9855d, 0.72);
-    g.fillRoundedRect(31, 54, 82, 7, 4);
-    g.fillStyle(PALETTE.warmCream, 1);
-    g.fillTriangle(76, 8, 76, 52, 131, 54);
-    g.fillStyle(PALETTE.butter, 0.76);
-    g.fillTriangle(79, 17, 79, 49, 119, 50);
-    g.fillStyle(PALETTE.coral, 1);
-    g.fillTriangle(76, 10, 76, 24, 92, 17);
-    g.lineStyle(5, PALETTE.ink, 0.24);
-    g.lineBetween(76, 8, 76, 57);
-    g.lineStyle(4, PALETTE.ink, 0.25);
-    g.strokeRoundedRect(12, 55, 136, 32, 16);
-    g.lineStyle(2, PALETTE.white, 0.55);
-    g.lineBetween(83, 17, 123, 51);
-    g.generateTexture("boat", 160, 96);
-    g.destroy();
+
+    const flag = this.make.graphics({ x: 0, y: 0 }, false);
+    flag.fillStyle(fill, 1);
+    flag.fillTriangle(7, 7, 7, 34, 43, 21);
+    flag.fillStyle(accent, 0.92);
+    flag.fillTriangle(11, 12, 11, 28, 32, 20);
+    flag.lineStyle(3, PALETTE.ink, 0.32);
+    flag.lineBetween(7, 6, 7, 39);
+    flag.lineBetween(7, 7, 43, 21);
+    flag.generateTexture(key, 48, 42);
+    flag.destroy();
   }
 
   private createCharacterTexture() {
@@ -312,48 +464,109 @@ export class BootScene extends Phaser.Scene {
 
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.fillStyle(PALETTE.ink, 0.12);
-    g.fillEllipse(60, 136, 64, 14);
+    g.fillEllipse(60, 178, 52, 12);
 
+    g.fillStyle(0x1d3547, 0.95);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(45, 128),
+        new Phaser.Math.Vector2(58, 128),
+        new Phaser.Math.Vector2(55, 170),
+        new Phaser.Math.Vector2(42, 170),
+      ],
+      true,
+    );
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(64, 128),
+        new Phaser.Math.Vector2(77, 128),
+        new Phaser.Math.Vector2(84, 170),
+        new Phaser.Math.Vector2(70, 170),
+      ],
+      true,
+    );
+    g.lineStyle(3, PALETTE.ink, 0.22);
+    g.lineBetween(51, 130, 48, 167);
+    g.lineBetween(70, 130, 77, 167);
+    g.lineStyle(6, 0x2a221f, 0.95);
+    g.lineBetween(38, 172, 53, 172);
+    g.lineBetween(70, 172, 88, 172);
+
+    g.fillStyle(0x21394b, 1);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(43, 64),
+        new Phaser.Math.Vector2(78, 64),
+        new Phaser.Math.Vector2(82, 130),
+        new Phaser.Math.Vector2(39, 130),
+      ],
+      true,
+    );
+    g.fillStyle(0xe0a253, 0.92);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(49, 70),
+        new Phaser.Math.Vector2(72, 70),
+        new Phaser.Math.Vector2(75, 122),
+        new Phaser.Math.Vector2(45, 122),
+      ],
+      true,
+    );
+    g.fillStyle(0x142b39, 0.8);
+    g.fillRect(56, 71, 4, 52);
+    g.fillRect(66, 71, 4, 52);
+    g.lineStyle(3, PALETTE.ink, 0.27);
+    g.beginPath();
+    g.moveTo(43, 64);
+    g.lineTo(78, 64);
+    g.lineTo(82, 130);
+    g.lineTo(39, 130);
+    g.closePath();
+    g.strokePath();
+
+    g.lineStyle(8, 0x21394b, 1);
+    g.lineBetween(43, 76, 29, 116);
+    g.lineBetween(77, 76, 99, 42);
     g.lineStyle(4, PALETTE.ink, 0.24);
-    g.fillStyle(PALETTE.seaGlass, 1);
-    g.fillRoundedRect(38, 72, 44, 48, 16);
-    g.fillStyle(PALETTE.warmCream, 1);
-    g.fillCircle(60, 47, 25);
-    g.strokeCircle(60, 47, 25);
+    g.lineBetween(43, 76, 29, 116);
+    g.lineBetween(77, 76, 99, 42);
+    g.fillStyle(0xd8ad8b, 1);
+    g.fillEllipse(29, 117, 9, 11);
+    g.fillEllipse(99, 42, 9, 11);
 
-    g.fillStyle(PALETTE.driftwoodDark, 1);
-    g.fillEllipse(60, 34, 45, 25);
-    g.fillStyle(PALETTE.butter, 1);
-    g.fillRoundedRect(34, 20, 52, 17, 9);
-    g.fillStyle(PALETTE.coral, 1);
-    g.fillTriangle(85, 21, 102, 28, 85, 35);
+    g.fillStyle(0xd8ad8b, 1);
+    g.fillEllipse(60, 43, 27, 33);
+    g.lineStyle(3, PALETTE.ink, 0.22);
+    g.strokeEllipse(60, 43, 27, 33);
+    g.fillStyle(0x2a211c, 1);
+    g.fillEllipse(60, 28, 31, 12);
+    g.fillStyle(0x1b3445, 1);
+    g.fillRoundedRect(39, 23, 42, 12, 3);
+    g.fillStyle(0x102634, 1);
+    g.fillRect(48, 14, 24, 11);
+    g.fillStyle(0xd9c4a3, 0.95);
+    g.fillRect(57, 16, 7, 7);
+    g.lineStyle(2, PALETTE.ink, 0.3);
+    g.strokeRoundedRect(39, 23, 42, 12, 3);
 
-    g.fillStyle(PALETTE.coral, 1);
-    g.fillRoundedRect(31, 77, 17, 15, 8);
-    g.fillRoundedRect(72, 77, 17, 15, 8);
-    g.fillStyle(PALETTE.warmCream, 1);
-    g.fillCircle(48, 52, 5);
-    g.fillCircle(72, 52, 5);
-    g.fillStyle(PALETTE.ink, 1);
-    g.fillCircle(49, 52, 2.5);
-    g.fillCircle(73, 52, 2.5);
-    g.lineStyle(3, PALETTE.coralDeep, 0.8);
+    g.fillStyle(0x102634, 1);
+    g.fillRoundedRect(50, 44, 8, 3, 1);
+    g.fillRoundedRect(63, 44, 8, 3, 1);
+    g.lineStyle(2, 0x6b4432, 0.72);
+    g.lineBetween(60, 48, 58, 55);
+    g.lineStyle(2, 0x4e3428, 0.82);
     g.beginPath();
-    g.arc(60, 58, 8, 0.08, Math.PI - 0.08);
+    g.arc(60, 57, 7, 0.18, Math.PI - 0.18);
     g.strokePath();
 
-    g.lineStyle(5, PALETTE.driftwoodDark, 0.9);
-    g.lineBetween(86, 76, 107, 42);
-    g.lineStyle(3, PALETTE.ink, 0.3);
-    g.lineBetween(107, 42, 105, 63);
-    g.beginPath();
-    g.arc(105, 67, 6, -0.6, Math.PI * 0.9);
-    g.strokePath();
-
-    g.lineStyle(5, PALETTE.inkSoft, 0.72);
-    g.lineBetween(47, 118, 43, 133);
-    g.lineBetween(73, 118, 77, 133);
-    g.generateTexture("captain-kid", 120, 148);
+    g.lineStyle(4, 0x6d4b34, 0.95);
+    g.lineBetween(96, 45, 112, 20);
+    g.lineStyle(2, PALETTE.ink, 0.34);
+    g.lineBetween(112, 20, 111, 43);
+    g.fillStyle(0xe8c76a, 0.85);
+    g.fillEllipse(111, 47, 8, 7);
+    g.strokeCircle(111, 47, 5);
+    g.generateTexture("captain-kid", 120, 190);
     g.destroy();
   }
 

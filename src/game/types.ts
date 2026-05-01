@@ -1,5 +1,31 @@
 export type Rarity = "common" | "uncommon" | "rare" | "special";
 
+export type StoryCondition =
+  | {
+      kind: "questClaimed";
+      questId: string;
+    }
+  | {
+      kind: "storyFlag";
+      flag: string;
+      value?: boolean;
+    }
+  | {
+      kind: "notStoryFlag";
+      flag: string;
+    };
+
+export type StoryRewards = {
+  shells?: number;
+  xp?: number;
+  itemId?: string;
+};
+
+export type StoryEffect = {
+  setFlags?: string[];
+  unlockAreaIds?: string[];
+};
+
 export type FishDefinition = {
   id: string;
   name: string;
@@ -23,12 +49,16 @@ export type AreaDefinition = {
 export type ItemDefinition = {
   id: string;
   name: string;
-  kind: "rod" | "bait" | "boatCosmetic";
+  kind: "rod" | "bait" | "boat" | "boatCosmetic";
   shellCost: number;
   description: string;
   effect?: {
     catchEase?: number;
+    lureSpeed?: number;
+    reelPower?: number;
     rareBoost?: number;
+    mutationChance?: number;
+    boatSpeed?: number;
     areaUnlock?: string;
   };
 };
@@ -65,7 +95,25 @@ export type QuestDefinition = {
   title: string;
   helper: string;
   steps: QuestStep[];
-  rewards: { shells?: number; xp?: number; itemId?: string };
+  requirements?: StoryCondition[];
+  rewards: StoryRewards;
+  effects?: StoryEffect;
+};
+
+export type StoryChoiceOption = {
+  id: string;
+  label: string;
+  description: string;
+  setFlags: string[];
+  rewards?: StoryRewards;
+};
+
+export type StoryChoiceDefinition = {
+  id: string;
+  title: string;
+  helper: string;
+  requirements: StoryCondition[];
+  options: StoryChoiceOption[];
 };
 
 export type QuestProgress = {
@@ -74,16 +122,20 @@ export type QuestProgress = {
 };
 
 export type PlayerState = {
-  saveVersion: 1;
+  saveVersion: 2;
   shells: number;
   level: number;
   xp: number;
   collection: Record<string, number>;
   equippedRodId: string;
   equippedBaitId?: string;
+  equippedBoatId: string;
+  equippedBoatCosmeticId?: string;
   ownedItemIds: string[];
   unlockedAreaIds: string[];
   questProgress: Record<string, QuestProgress>;
+  storyFlags: Record<string, boolean>;
+  choiceHistory: Record<string, string>;
   muted: boolean;
 };
 
@@ -97,10 +149,20 @@ export type FishingAttempt = {
 
 export type CatchQuality = "miss" | "nice" | "great" | "sparkle";
 
+export type CatchMutation = {
+  id: "gleaming" | "tidekissed" | "aurora";
+  label: string;
+  valueMultiplier: number;
+  xpMultiplier: number;
+  message: string;
+  tint: number;
+};
+
 export type CatchResult = {
   success: boolean;
   quality: CatchQuality;
   fish?: FishDefinition;
+  mutation?: CatchMutation;
   shells: number;
   xp: number;
   message: string;

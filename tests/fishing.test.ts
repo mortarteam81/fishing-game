@@ -14,7 +14,7 @@ describe("fishing loop", () => {
   it("rewards a successful center timing", () => {
     const state = createInitialState();
     const attempt = startFishing("sunny-beach", state, () => 0.1);
-    const result = resolveTiming(attempt, attempt.targetCenter, state);
+    const result = resolveTiming(attempt, attempt.targetCenter, state, () => 1);
 
     expect(result.success).toBe(true);
     expect(result.quality).toBe("sparkle");
@@ -30,5 +30,16 @@ describe("fishing loop", () => {
     expect(result.success).toBe(false);
     expect(result.shells).toBeGreaterThan(0);
     expect(result.consolation).toBeTruthy();
+  });
+
+  it("can roll a valuable catch mutation on a strong catch", () => {
+    const state = { ...createInitialState(), storyFlags: { "coral-guardian": true } };
+    const attempt = startFishing("sunny-beach", state, () => 0.1);
+    const rolls = [0, 0.95];
+    const result = resolveTiming(attempt, attempt.targetCenter, state, () => rolls.shift() ?? 1);
+
+    expect(result.success).toBe(true);
+    expect(result.mutation?.id).toBe("aurora");
+    expect(result.shells).toBeGreaterThan(attempt.fish.baseShells);
   });
 });

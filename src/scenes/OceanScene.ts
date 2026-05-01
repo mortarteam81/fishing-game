@@ -1,7 +1,9 @@
 import Phaser from "phaser";
+import { addPlayerBoat, boatWakeTint } from "../game/boat";
 import { getArea } from "../game/content";
 import { PALETTE, TEXT } from "../game/palette";
 import { playSoftTone } from "../game/audio";
+import { getBoatSpeed } from "../game/progression";
 import { loadGame } from "../game/storage";
 import { addMuteButton, addTextButton } from "../game/ui";
 import type { AreaDefinition, PlayerState } from "../game/types";
@@ -43,7 +45,7 @@ const hotspots: Hotspot[] = [
 
 export class OceanScene extends Phaser.Scene {
   private state!: PlayerState;
-  private boat!: Phaser.GameObjects.Image;
+  private boat!: Phaser.GameObjects.Container;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys?: Record<string, Phaser.Input.Keyboard.Key>;
   private target?: Phaser.Math.Vector2;
@@ -224,11 +226,11 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private addBoat() {
-    this.boat = this.add.image(230, 850, "boat").setScale(1.03).setDepth(12);
+    this.boat = addPlayerBoat(this, 230, 850, this.state, { scale: 0.82, depth: 12, mapMode: true, showCaptain: false });
     this.cameras.main.startFollow(this.boat, true, 0.08, 0.08);
     this.tweens.add({
       targets: this.boat,
-      scaleY: 1.09,
+      scaleY: 0.9,
       duration: 1100,
       yoyo: true,
       repeat: -1,
@@ -383,7 +385,7 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private moveBoat(delta: number) {
-    const speed = 0.23 * delta;
+    const speed = (0.23 + getBoatSpeed(this.state) * 0.16) * delta;
     const direction = new Phaser.Math.Vector2(0, 0);
     if (this.cursors?.left.isDown || this.keys?.A.isDown) direction.x -= 1;
     if (this.cursors?.right.isDown || this.keys?.D.isDown) direction.x += 1;
@@ -426,9 +428,8 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private rotateBoat(direction: Phaser.Math.Vector2) {
-    const targetRotation = Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) * 0.25;
-    this.boat.rotation = Phaser.Math.Angle.RotateTo(this.boat.rotation, targetRotation, 0.045);
-    this.boat.setFlipX(direction.x < -0.1);
+    const targetRotation = Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) + Math.PI / 2;
+    this.boat.rotation = Phaser.Math.Angle.RotateTo(this.boat.rotation, targetRotation, 0.08);
   }
 
   private addWake(delta: number) {
@@ -436,8 +437,8 @@ export class OceanScene extends Phaser.Scene {
     if (this.wakeCooldown > 0) {
       return;
     }
-    this.wakeCooldown = 110;
-    const wake = this.add.circle(this.boat.x - 24, this.boat.y + 22, 10, PALETTE.white, 0.38).setDepth(9);
+    this.wakeCooldown = Math.max(62, 110 - getBoatSpeed(this.state) * 95);
+    const wake = this.add.circle(this.boat.x - 24, this.boat.y + 22, 10, boatWakeTint(this.state.equippedBoatId), 0.38).setDepth(9);
     this.tweens.add({
       targets: wake,
       scale: 2.4,

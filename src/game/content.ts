@@ -1,4 +1,10 @@
-import type { AreaDefinition, FishDefinition, ItemDefinition, QuestDefinition } from "./types";
+import type {
+  AreaDefinition,
+  FishDefinition,
+  ItemDefinition,
+  QuestDefinition,
+  StoryChoiceDefinition,
+} from "./types";
 
 export const fish: FishDefinition[] = [
   {
@@ -261,24 +267,72 @@ export const items: ItemDefinition[] = [
     name: "나뭇가지 낚싯대",
     kind: "rod",
     shellCost: 0,
-    description: "처음부터 함께하는 든든한 낚싯대예요.",
-    effect: { catchEase: 0 },
+    description: "처음부터 함께하는 기본 낚싯대예요.",
+    effect: { catchEase: 0, lureSpeed: 0, reelPower: 0 },
   },
   {
     id: "sparkle-rod",
     name: "반짝 낚싯대",
     kind: "rod",
     shellCost: 70,
-    description: "타이밍 구간이 조금 넓어져요.",
-    effect: { catchEase: 0.08 },
+    description: "타이밍 구간과 입질 속도가 조금 좋아져요.",
+    effect: { catchEase: 0.08, lureSpeed: 0.12, reelPower: 0.02 },
   },
   {
     id: "captain-rod",
     name: "용감한 선장 낚싯대",
     kind: "rod",
     shellCost: 150,
-    description: "큰 친구를 만날 때 마음이 더 편해져요.",
-    effect: { catchEase: 0.13 },
+    description: "릴 힘이 좋아져 큰 친구를 붙잡기 쉬워요.",
+    effect: { catchEase: 0.13, lureSpeed: 0.16, reelPower: 0.05, rareBoost: 0.03 },
+  },
+  {
+    id: "tideglass-rod",
+    name: "물빛 유리 낚싯대",
+    kind: "rod",
+    shellCost: 260,
+    description: "입질이 빨라지고 변이 친구를 만날 확률이 올라요.",
+    effect: { catchEase: 0.17, lureSpeed: 0.26, reelPower: 0.08, rareBoost: 0.07, mutationChance: 0.04 },
+  },
+  {
+    id: "aurora-rod",
+    name: "오로라 심해 낚싯대",
+    kind: "rod",
+    shellCost: 460,
+    description: "강한 릴링과 오로라 변이 확률을 지닌 고급 장비예요.",
+    effect: { catchEase: 0.22, lureSpeed: 0.34, reelPower: 0.12, rareBoost: 0.12, mutationChance: 0.08 },
+  },
+  {
+    id: "harbor-skiff",
+    name: "항구 소형 작업선",
+    kind: "boat",
+    shellCost: 0,
+    description: "기본 선체. 잔잔한 항해에 알맞아요.",
+    effect: { boatSpeed: 0 },
+  },
+  {
+    id: "blue-runabout",
+    name: "블루 러너 보트",
+    kind: "boat",
+    shellCost: 120,
+    description: "가벼운 선체로 바다 지도를 더 빠르게 항해해요.",
+    effect: { boatSpeed: 0.14, lureSpeed: 0.04 },
+  },
+  {
+    id: "coral-runner",
+    name: "산호 탐사선",
+    kind: "boat",
+    shellCost: 260,
+    description: "산호초 탐험에 맞춘 선체. 희귀 친구 소문이 늘어요.",
+    effect: { boatSpeed: 0.22, rareBoost: 0.06, mutationChance: 0.02 },
+  },
+  {
+    id: "aurora-cutter",
+    name: "오로라 커터",
+    kind: "boat",
+    shellCost: 520,
+    description: "먼 바다용 고급 선체. 항해와 낚시 보너스가 모두 좋아요.",
+    effect: { boatSpeed: 0.32, catchEase: 0.04, lureSpeed: 0.08, mutationChance: 0.05 },
   },
   {
     id: "sweet-bait",
@@ -303,6 +357,45 @@ export const items: ItemDefinition[] = [
     shellCost: 60,
     description: "배 위에서 살랑살랑 빛나는 깃발이에요.",
   },
+  {
+    id: "harbor-pennant",
+    name: "조선공 삼각깃발",
+    kind: "boatCosmetic",
+    shellCost: 80,
+    description: "항구 사람들의 신뢰를 담은 단정한 깃발이에요.",
+  },
+  {
+    id: "coral-pennant",
+    name: "산호 수호 깃발",
+    kind: "boatCosmetic",
+    shellCost: 80,
+    description: "산호초를 지키겠다는 약속이 은은히 빛나요.",
+  },
+];
+
+export const storyChoices: StoryChoiceDefinition[] = [
+  {
+    id: "first-voyage-route",
+    title: "첫 항로를 정하기",
+    helper: "선장 수첩에 첫 목표를 적어두면 새로운 부탁이 열려요.",
+    requirements: [{ kind: "questClaimed", questId: "first-friend" }],
+    options: [
+      {
+        id: "harbor-route",
+        label: "항구 재건 돕기",
+        description: "더 좋은 배와 장비를 빨리 준비하는 안정적인 항로예요.",
+        setFlags: ["route-harbor"],
+        rewards: { shells: 35, xp: 18, itemId: "harbor-pennant" },
+      },
+      {
+        id: "coral-route",
+        label: "산호초 지키기",
+        description: "희귀한 바다 친구와 신비한 소문을 따라가는 탐험 항로예요.",
+        setFlags: ["route-coral"],
+        rewards: { shells: 25, xp: 24, itemId: "coral-pennant" },
+      },
+    ],
+  },
 ];
 
 export const quests: QuestDefinition[] = [
@@ -312,6 +405,30 @@ export const quests: QuestDefinition[] = [
     helper: "낚시 버튼을 눌러 첫 친구를 만나봐요.",
     steps: [{ kind: "catchAny", count: 1 }],
     rewards: { shells: 25, xp: 18 },
+  },
+  {
+    id: "shipwright-ledger",
+    title: "조선공의 항해 장부",
+    helper: "항구 재건을 도우려면 튼튼한 장비와 충분한 항해 기록이 필요해요.",
+    requirements: [{ kind: "storyFlag", flag: "route-harbor" }],
+    steps: [
+      { kind: "catchAny", count: 5 },
+      { kind: "ownItem", itemId: "sparkle-rod" },
+    ],
+    rewards: { shells: 65, xp: 46, itemId: "star-flag" },
+    effects: { setFlags: ["harbor-trusted"] },
+  },
+  {
+    id: "coral-nursery",
+    title: "산호 묘목 지키기",
+    helper: "은은한 빛을 따라가며 산호초를 돌보는 친구들을 찾아봐요.",
+    requirements: [{ kind: "storyFlag", flag: "route-coral" }],
+    steps: [
+      { kind: "catchFish", fishId: "moon-jelly", count: 1 },
+      { kind: "collectUnique", count: 4 },
+    ],
+    rewards: { shells: 55, xp: 54, itemId: "star-flag" },
+    effects: { setFlags: ["coral-guardian"] },
   },
   {
     id: "tiny-collector",
@@ -350,3 +467,4 @@ export const getFish = (id: string) => fish.find((entry) => entry.id === id);
 export const getArea = (id: string) => areas.find((entry) => entry.id === id);
 export const getItem = (id: string) => items.find((entry) => entry.id === id);
 export const getQuest = (id: string) => quests.find((entry) => entry.id === id);
+export const getStoryChoice = (id: string) => storyChoices.find((entry) => entry.id === id);

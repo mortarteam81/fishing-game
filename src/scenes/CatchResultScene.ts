@@ -27,7 +27,20 @@ export class CatchResultScene extends Phaser.Scene {
 
     if (this.result.success && this.result.fish) {
       this.add.image(480, 176, "sparkle-point").setScale(1.25).setAlpha(0.5);
-      this.add.image(480, 180, this.result.fish.assetKey).setScale(2.1);
+      const fishImage = this.add.image(480, 180, this.result.fish.assetKey).setScale(2.1);
+      if (this.result.mutation) {
+        fishImage.setTint(this.result.mutation.tint);
+        this.add
+          .text(480, 226, this.result.mutation.label, {
+            fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+            fontSize: "18px",
+            fontStyle: "900",
+            color: TEXT.primary,
+            backgroundColor: "rgba(255,251,239,0.72)",
+            padding: { x: 12, y: 5 },
+          })
+          .setOrigin(0.5);
+      }
       this.add
         .text(480, 272, this.result.fish.name, {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",

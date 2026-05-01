@@ -35,12 +35,25 @@ export class CollectionScene extends Phaser.Scene {
 
     const pageFish = fish.slice(this.page * PAGE_SIZE, this.page * PAGE_SIZE + PAGE_SIZE);
     const maxPage = Math.max(0, Math.ceil(fish.length / PAGE_SIZE) - 1);
+    const discovered = fish.filter((entry) => (this.state.collection[entry.id] ?? 0) > 0).length;
+    const completion = Math.round((discovered / fish.length) * 100);
+
+    this.add
+      .text(480, 70, `도감 ${discovered}/${fish.length} · 완성도 ${completion}%`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "20px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        backgroundColor: "rgba(255,251,239,0.68)",
+        padding: { x: 14, y: 6 },
+      })
+      .setOrigin(0.5);
 
     pageFish.forEach((entry, index) => {
       const col = index % 3;
       const row = Math.floor(index / 3);
       const x = 190 + col * 290;
-      const y = 120 + row * 125;
+      const y = 135 + row * 115;
       const count = this.state.collection[entry.id] ?? 0;
       addPanel(this, x, y, 250, 100, count > 0 ? PALETTE.paper : 0xdce8ef);
       this.add.image(x - 88, y, entry.assetKey).setScale(0.85).setAlpha(count > 0 ? 1 : 0.18);

@@ -3,18 +3,25 @@ import type { PlayerState } from "./types";
 
 const STORAGE_KEY = "banjjakbada-save-v1";
 
+type StoredPlayerState = Omit<Partial<PlayerState>, "saveVersion"> & {
+  saveVersion?: number;
+};
+
 export const createInitialState = (): PlayerState => ({
-  saveVersion: 1,
+  saveVersion: 2,
   shells: 35,
   level: 1,
   xp: 0,
   collection: {},
   equippedRodId: "twig-rod",
-  ownedItemIds: ["twig-rod"],
+  equippedBoatId: "harbor-skiff",
+  ownedItemIds: ["twig-rod", "harbor-skiff"],
   unlockedAreaIds: areas.filter((area) => area.requiredLevel <= 1).map((area) => area.id),
   questProgress: Object.fromEntries(
     quests.map((quest) => [quest.id, { completed: false, claimed: false }]),
   ),
+  storyFlags: {},
+  choiceHistory: {},
   muted: false,
 });
 
@@ -29,8 +36,8 @@ export function loadGame(): PlayerState {
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<PlayerState>;
-    if (parsed.saveVersion !== 1) {
+    const parsed = JSON.parse(raw) as StoredPlayerState;
+    if (parsed.saveVersion !== 1 && parsed.saveVersion !== 2) {
       return createInitialState();
     }
 
@@ -38,14 +45,24 @@ export function loadGame(): PlayerState {
     return {
       ...initial,
       ...parsed,
+      saveVersion: 2,
       collection: { ...initial.collection, ...(parsed.collection ?? {}) },
-      ownedItemIds: Array.from(new Set([...(parsed.ownedItemIds ?? []), "twig-rod"])),
+      equippedBoatId: parsed.equippedBoatId ?? "harbor-skiff",
+      ownedItemIds: Array.from(new Set([...(parsed.ownedItemIds ?? []), "twig-rod", "harbor-skiff"])),
       unlockedAreaIds: Array.from(
         new Set([...(initial.unlockedAreaIds ?? []), ...(parsed.unlockedAreaIds ?? [])]),
       ),
       questProgress: {
         ...initial.questProgress,
         ...(parsed.questProgress ?? {}),
+      },
+      storyFlags: {
+        ...initial.storyFlags,
+        ...(parsed.storyFlags ?? {}),
+      },
+      choiceHistory: {
+        ...initial.choiceHistory,
+        ...(parsed.choiceHistory ?? {}),
       },
     };
   } catch {
@@ -58,7 +75,7 @@ export function saveGame(state: PlayerState): void {
     return;
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, saveVersion: 2 }));
 }
 
 export function resetGame(): PlayerState {

@@ -1,7 +1,13 @@
 import Phaser from "phaser";
+import { addPlayerBoat } from "../game/boat";
 import { areas } from "../game/content";
 import { PALETTE, TEXT } from "../game/palette";
-import { nextQuestHint, refreshQuestCompletion } from "../game/progression";
+import {
+  applyStoryChoice,
+  getAvailableStoryChoices,
+  nextQuestHint,
+  refreshQuestCompletion,
+} from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
 import type { PlayerState } from "../game/types";
@@ -22,24 +28,16 @@ export class HarborScene extends Phaser.Scene {
     addMuteButton(this);
     this.addBoat();
     this.addHeroPanel();
+    this.addStoryChoicePanel();
     this.addVoyagePanel();
     this.addNavigation();
   }
 
   private addBoat() {
-    const boat = this.add.image(190, 330, "boat").setScale(1.4);
-    const captain = this.add.image(218, 260, "captain-kid").setScale(0.62);
+    const boat = addPlayerBoat(this, 190, 302, this.state, { scale: 1.18, depth: 5 });
     this.tweens.add({
       targets: boat,
-      y: 340,
-      duration: 1600,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.inOut",
-    });
-    this.tweens.add({
-      targets: captain,
-      y: 270,
+      y: 316,
       duration: 1600,
       yoyo: true,
       repeat: -1,
@@ -78,15 +76,6 @@ export class HarborScene extends Phaser.Scene {
   }
 
   private addVoyagePanel() {
-    this.add
-      .text(64, 410, "항해 준비", {
-        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "25px",
-        fontStyle: "800",
-        color: TEXT.primary,
-      })
-      .setOrigin(0, 0.5);
-
     addTextButton(this, 175, 470, "항해 시작", () => this.scene.start("Ocean"), {
       width: 220,
       height: 66,
@@ -114,6 +103,53 @@ export class HarborScene extends Phaser.Scene {
           disabled: !unlocked,
           iconKey: unlocked ? "icon-bait" : undefined,
           iconScale: 0.38,
+        },
+      );
+    });
+  }
+
+  private addStoryChoicePanel() {
+    const choice = getAvailableStoryChoices(this.state)[0];
+    if (!choice) {
+      return;
+    }
+
+    addPanel(this, 625, 354, 560, 124, PALETTE.paper);
+    this.add
+      .text(380, 318, choice.title, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "24px",
+        fontStyle: "900",
+        color: TEXT.primary,
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(380, 348, choice.helper, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "16px",
+        fontStyle: "700",
+        color: TEXT.secondary,
+        wordWrap: { width: 480 },
+      })
+      .setOrigin(0, 0.5);
+
+    choice.options.forEach((option, index) => {
+      addTextButton(
+        this,
+        506 + index * 238,
+        392,
+        option.label,
+        () => {
+          saveGame(applyStoryChoice(this.state, choice.id, option.id));
+          this.scene.restart();
+        },
+        {
+          width: 216,
+          height: 48,
+          fontSize: 16,
+          fill: index === 0 ? PALETTE.seaFoam : PALETTE.lavender,
+          iconKey: index === 0 ? "icon-harbor" : "icon-bait",
+          iconScale: 0.31,
         },
       );
     });
