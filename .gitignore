@@ -2,3 +2,5 @@ node_modules/
 dist/
 .DS_Store
 *.log
+.banjjakbada-local-save.json
+.claude/

@@ -529,4 +529,318 @@ export const CREATURE_SVGS: Record<string, string> = {
   <circle cx="74.5" cy="34" r="1.6" fill="white"/>
   <path d="M60 48 Q68 54 74 48" fill="none" stroke="#1a1209" stroke-width="1.5" stroke-linecap="round"/>
 </svg>`,
+
+  /* ───────── 20. 별바다 떠돌이 · Starlit Offshore Drifter ───────── */
+  "fish-starlit-offshore-drifter": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <radialGradient id="g" cx="48%" cy="38%" r="68%">
+      <stop offset="0%" stop-color="#b8fff0"/>
+      <stop offset="58%" stop-color="#3aa8c8"/>
+      <stop offset="100%" stop-color="#143068"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="45%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#fff7a8"/>
+      <stop offset="100%" stop-color="#e0a820"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="48" cy="62" rx="28" ry="5" fill="#1a1209" opacity="0.1"/>
+  <path d="M20 34 L6 20 Q10 34 6 48Z" fill="#143068" stroke="#1a1209" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M38 15 Q46 2 58 14 Q50 20 38 15Z" fill="#67d8e8" stroke="#1a1209" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M21 34 Q34 14 58 18 Q80 21 86 36 Q76 54 50 54 Q30 52 21 34Z" fill="url(#g)" stroke="#1a1209" stroke-width="2.3" stroke-linejoin="round"/>
+  <path d="M32 22 Q54 15 76 28" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round" opacity="0.42"/>
+  <path d="M34 46 Q48 58 64 48" fill="none" stroke="#143068" stroke-width="3" stroke-linecap="round" opacity="0.32"/>
+  <path d="M31 34 L34 29 L37 34 L42 35 L38 38 L39 43 L34 40 L29 43 L30 38 L26 35Z" fill="url(#g2)" stroke="#1a1209" stroke-width="1.1" stroke-linejoin="round"/>
+  <path d="M53 27 L55 23 L57 27 L61 28 L58 31 L59 35 L55 33 L51 35 L52 31 L49 28Z" fill="#fff7a8" opacity="0.92" stroke="#1a1209" stroke-width="0.8" stroke-linejoin="round"/>
+  <circle cx="42" cy="41" r="2.6" fill="#fff7a8" opacity="0.85"/>
+  <circle cx="64" cy="42" r="2.2" fill="#fff7a8" opacity="0.75"/>
+  <circle cx="73" cy="34" r="6.5" fill="white" stroke="#1a1209" stroke-width="1.5"/>
+  <circle cx="74" cy="34" r="3.8" fill="#1a1209"/>
+  <circle cx="75.5" cy="32.5" r="1.4" fill="white"/>
+  <path d="M66 44 Q72 49 78 44" fill="none" stroke="#1a1209" stroke-width="1.4" stroke-linecap="round"/>
+</svg>`,
+
+  /* ───────── 21. 유리심해 바늘고기 · Glass Trench Needlefish ───────── */
+  "fish-glass-trench-needlefish": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d8ffff"/>
+      <stop offset="48%" stop-color="#78d8f0"/>
+      <stop offset="100%" stop-color="#2a6f98"/>
+    </linearGradient>
+    <radialGradient id="g2" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#9ee8ff"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="51" cy="60" rx="31" ry="4" fill="#1a1209" opacity="0.08"/>
+  <path d="M20 34 L4 24 L7 34 L4 44Z" fill="#2a6f98" stroke="#1a1209" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M24 34 Q42 22 74 27 L92 34 L74 41 Q42 46 24 34Z" fill="url(#g)" stroke="#1a1209" stroke-width="2" stroke-linejoin="round" opacity="0.95"/>
+  <path d="M74 27 L92 34 L74 41 Q82 34 74 27Z" fill="url(#g2)" stroke="#1a1209" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M34 26 L40 43 M48 24 L52 44 M62 25 L64 42" stroke="#1a1209" stroke-width="1" opacity="0.26" stroke-linecap="round"/>
+  <path d="M27 33 Q50 28 80 32" fill="none" stroke="white" stroke-width="2.3" stroke-linecap="round" opacity="0.62"/>
+  <path d="M28 38 Q50 42 74 38" fill="none" stroke="#124460" stroke-width="1.4" stroke-linecap="round" opacity="0.38"/>
+  <path d="M40 20 Q50 10 62 22" fill="#78d8f0" stroke="#1a1209" stroke-width="1.4" stroke-linejoin="round" opacity="0.78"/>
+  <path d="M49 45 Q56 55 64 44" fill="#78d8f0" stroke="#1a1209" stroke-width="1.4" stroke-linejoin="round" opacity="0.78"/>
+  <circle cx="73" cy="32" r="5.5" fill="white" stroke="#1a1209" stroke-width="1.5"/>
+  <circle cx="74" cy="32" r="3.2" fill="#1a1209"/>
+  <circle cx="75.2" cy="30.7" r="1.1" fill="white"/>
+  <path d="M68 38 Q72 41 76 38" fill="none" stroke="#1a1209" stroke-width="1.2" stroke-linecap="round"/>
+  <circle cx="36" cy="35" r="2" fill="#e8ffff" opacity="0.85"/>
+  <circle cx="52" cy="31" r="1.8" fill="#e8ffff" opacity="0.78"/>
+</svg>`,
+
+  /* ───────── 22. 폭풍길 베일가오리 · Tempest Pass Veil Ray ───────── */
+  "fish-tempest-pass-veil-ray": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <radialGradient id="g" cx="48%" cy="34%" r="66%">
+      <stop offset="0%" stop-color="#c0f0ff"/>
+      <stop offset="62%" stop-color="#5c88c8"/>
+      <stop offset="100%" stop-color="#243060"/>
+    </radialGradient>
+    <linearGradient id="bolt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff6a0"/>
+      <stop offset="100%" stop-color="#f0a020"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="49" cy="61" rx="32" ry="5" fill="#1a1209" opacity="0.1"/>
+  <path d="M65 47 Q79 52 94 62" fill="none" stroke="#243060" stroke-width="4" stroke-linecap="round"/>
+  <path d="M48 8 Q70 18 90 38 Q68 48 48 60 Q28 48 6 38 Q26 18 48 8Z" fill="url(#g)" stroke="#1a1209" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M20 38 Q24 56 44 58 Q30 49 20 38Z" fill="#7bb0d8" stroke="#1a1209" stroke-width="1.3" opacity="0.7"/>
+  <path d="M76 38 Q72 56 52 58 Q66 49 76 38Z" fill="#7bb0d8" stroke="#1a1209" stroke-width="1.3" opacity="0.7"/>
+  <path d="M28 26 Q48 16 68 26" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.45"/>
+  <path d="M38 17 L49 30 L44 31 L57 48 L50 35 L56 34Z" fill="url(#bolt)" stroke="#1a1209" stroke-width="1.2" stroke-linejoin="round" opacity="0.95"/>
+  <path d="M25 42 Q48 34 72 42" fill="none" stroke="#1a1209" stroke-width="1.2" opacity="0.28" stroke-dasharray="5,3"/>
+  <circle cx="38" cy="35" r="5.4" fill="white" stroke="#1a1209" stroke-width="1.5"/>
+  <circle cx="39" cy="35" r="3.1" fill="#1a1209"/>
+  <circle cx="40.2" cy="33.7" r="1.1" fill="white"/>
+  <circle cx="58" cy="35" r="5.4" fill="white" stroke="#1a1209" stroke-width="1.5"/>
+  <circle cx="59" cy="35" r="3.1" fill="#1a1209"/>
+  <circle cx="60.2" cy="33.7" r="1.1" fill="white"/>
+  <path d="M42 44 Q48 49 54 44" fill="none" stroke="#1a1209" stroke-width="1.5" stroke-linecap="round"/>
+</svg>`,
+
+  /* ───────── 23. 시간정원 혜성오징어 · Temporal Garden Comet Squid ───────── */
+  "fish-temporal-garden-comet-squid": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <radialGradient id="g" cx="46%" cy="30%" r="67%">
+      <stop offset="0%" stop-color="#fff0b8"/>
+      <stop offset="52%" stop-color="#d48be8"/>
+      <stop offset="100%" stop-color="#5850b8"/>
+    </radialGradient>
+    <linearGradient id="tail" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#88f0d8"/>
+      <stop offset="100%" stop-color="#f8d060"/>
+    </linearGradient>
+  </defs>
+  <path d="M18 12 Q30 24 24 39" fill="none" stroke="url(#tail)" stroke-width="4" stroke-linecap="round" opacity="0.82"/>
+  <path d="M8 18 Q25 28 26 48" fill="none" stroke="#88f0d8" stroke-width="2.4" stroke-linecap="round" opacity="0.72"/>
+  <path d="M24 50 Q20 58 22 67" fill="none" stroke="#5850b8" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M34 52 Q31 60 33 68" fill="none" stroke="#5850b8" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M44 53 Q43 61 45 68" fill="none" stroke="#5850b8" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M54 53 Q56 61 55 68" fill="none" stroke="#5850b8" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M64 51 Q69 59 69 66" fill="none" stroke="#5850b8" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M24 42 Q22 24 34 12 Q48 3 62 12 Q76 24 72 46 Q61 53 46 54 Q32 52 24 42Z" fill="url(#g)" stroke="#1a1209" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M31 20 Q48 12 65 20" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.46"/>
+  <circle cx="48" cy="30" r="13" fill="none" stroke="#fff0b8" stroke-width="2" opacity="0.55"/>
+  <path d="M48 20 L50 30 L58 34" fill="none" stroke="#1a1209" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="48" cy="30" r="2.2" fill="#1a1209" opacity="0.6"/>
+  <circle cx="39" cy="38" r="5.5" fill="white" stroke="#1a1209" stroke-width="1.5"/>
+  <circle cx="40" cy="38" r="3.2" fill="#1a1209"/>
+  <circle cx="41.2" cy="36.7" r="1.1" fill="white"/>
+  <circle cx="58" cy="38" r="5.5" fill="white" stroke="#1a1209" stroke-width="1.5"/>
+  <circle cx="59" cy="38" r="3.2" fill="#1a1209"/>
+  <circle cx="60.2" cy="36.7" r="1.1" fill="white"/>
+  <path d="M43 46 Q49 50 55 46" fill="none" stroke="#1a1209" stroke-width="1.4" stroke-linecap="round"/>
+</svg>`,
+
+  /* ───────── 24. 오로라왕관 모자이크게 · Aurora Crown Mosaic Crab ───────── */
+  "fish-aurora-crown-mosaic-crab": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <radialGradient id="g" cx="48%" cy="42%" r="62%">
+      <stop offset="0%" stop-color="#e6fff0"/>
+      <stop offset="50%" stop-color="#5ed8c8"/>
+      <stop offset="100%" stop-color="#285090"/>
+    </radialGradient>
+    <linearGradient id="crown" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#88f0d8"/>
+      <stop offset="50%" stop-color="#ffd870"/>
+      <stop offset="100%" stop-color="#d98cff"/>
+    </linearGradient>
+  </defs>
+  <path d="M26 45 L10 38 M27 51 L9 51 M30 56 L14 62" stroke="#285090" stroke-width="3" stroke-linecap="round"/>
+  <path d="M70 45 L86 38 M69 51 L87 51 M66 56 L82 62" stroke="#285090" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="48" cy="48" rx="25" ry="16" fill="url(#g)" stroke="#1a1209" stroke-width="2.2"/>
+  <path d="M28 43 Q32 22 48 18 Q64 22 68 43Z" fill="#d98cff" stroke="#1a1209" stroke-width="2" opacity="0.9"/>
+  <path d="M35 22 L39 10 L46 18 L52 7 L58 18 L65 10 L67 24" fill="url(#crown)" stroke="#1a1209" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M34 31 L44 23 L52 32 L40 40Z" fill="#88f0d8" opacity="0.64" stroke="#1a1209" stroke-width="0.9"/>
+  <path d="M52 32 L62 24 L66 39 L56 42Z" fill="#ffd870" opacity="0.62" stroke="#1a1209" stroke-width="0.9"/>
+  <path d="M36 45 L48 34 L60 44 L49 53Z" fill="#ffffff" opacity="0.2" stroke="#1a1209" stroke-width="0.8"/>
+  <ellipse cx="16" cy="35" rx="10" ry="8" fill="#5ed8c8" stroke="#1a1209" stroke-width="1.5"/>
+  <path d="M8 31 L14 27 M8 39 L14 41" fill="none" stroke="#1a1209" stroke-width="1.4" stroke-linecap="round"/>
+  <ellipse cx="80" cy="35" rx="10" ry="8" fill="#d98cff" stroke="#1a1209" stroke-width="1.5"/>
+  <path d="M88 31 L82 27 M88 39 L82 41" fill="none" stroke="#1a1209" stroke-width="1.4" stroke-linecap="round"/>
+  <circle cx="39" cy="34" r="5.2" fill="white" stroke="#1a1209" stroke-width="1.4"/>
+  <circle cx="40" cy="34" r="2.9" fill="#1a1209"/>
+  <circle cx="41" cy="32.8" r="1" fill="white"/>
+  <circle cx="57" cy="34" r="5.2" fill="white" stroke="#1a1209" stroke-width="1.4"/>
+  <circle cx="58" cy="34" r="2.9" fill="#1a1209"/>
+  <circle cx="59" cy="32.8" r="1" fill="white"/>
+  <path d="M42 42 Q48 47 54 42" fill="none" stroke="#1a1209" stroke-width="1.4" stroke-linecap="round"/>
+</svg>`,
+
+  /* ───────── 25. 별바다 초롱장어 · Starlit Offshore Lantern Eel ───────── */
+  "fish-starlit-offshore-lantern-eel": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#132050"/>
+      <stop offset="48%" stop-color="#3868a8"/>
+      <stop offset="100%" stop-color="#89e8d8"/>
+    </linearGradient>
+    <radialGradient id="lamp" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#ffffb8"/>
+      <stop offset="100%" stop-color="#d8a020"/>
+    </radialGradient>
+  </defs>
+  <circle cx="75" cy="9" r="13" fill="#ffffb8" opacity="0.2"/>
+  <circle cx="75" cy="9" r="7" fill="url(#lamp)" stroke="#1a1209" stroke-width="1.4"/>
+  <path d="M58 24 Q64 14 73 10" fill="none" stroke="#1a1209" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M6 49 Q20 57 35 48 Q48 39 56 31 Q67 20 86 25" fill="none" stroke="#1a1209" stroke-width="17" stroke-linecap="round"/>
+  <path d="M6 49 Q20 57 35 48 Q48 39 56 31 Q67 20 86 25" fill="none" stroke="url(#g)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M16 48 Q34 48 50 32" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.38"/>
+  <ellipse cx="84" cy="25" rx="10" ry="8" fill="#89e8d8" stroke="#1a1209" stroke-width="1.6" transform="rotate(12 84 25)"/>
+  <path d="M12 50 L3 44 L4 56Z" fill="#132050" stroke="#1a1209" stroke-width="1.4" stroke-linejoin="round"/>
+  <circle cx="81" cy="23" r="4.6" fill="white" stroke="#1a1209" stroke-width="1.3"/>
+  <circle cx="82" cy="23" r="2.7" fill="#1a1209"/>
+  <circle cx="83" cy="22" r="0.9" fill="white"/>
+  <path d="M79 30 Q84 33 88 30" fill="none" stroke="#1a1209" stroke-width="1.2" stroke-linecap="round"/>
+  <circle cx="31" cy="48" r="2.5" fill="#ffffb8" opacity="0.9"/>
+  <circle cx="44" cy="39" r="2.2" fill="#ffffb8" opacity="0.82"/>
+  <path d="M36 36 L38 33 L40 36 L43 37 L40 39 L41 42 L38 40 L35 42 L36 39 L33 37Z" fill="#ffffb8" opacity="0.85"/>
+</svg>`,
+
+  /* ───────── 26. 유리심해 벨벳거북 · Glass Trench Velvet Turtle ───────── */
+  "fish-glass-trench-velvet-turtle": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <radialGradient id="g" cx="48%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#dffff8"/>
+      <stop offset="58%" stop-color="#5478b8"/>
+      <stop offset="100%" stop-color="#281c58"/>
+    </radialGradient>
+    <radialGradient id="gem" cx="38%" cy="32%" r="60%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#9ee8ff"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="18" cy="32" rx="12" ry="7" fill="#281c58" stroke="#1a1209" stroke-width="1.5" transform="rotate(-28 18 32)"/>
+  <ellipse cx="78" cy="32" rx="12" ry="7" fill="#281c58" stroke="#1a1209" stroke-width="1.5" transform="rotate(28 78 32)"/>
+  <ellipse cx="22" cy="53" rx="10" ry="6" fill="#281c58" stroke="#1a1209" stroke-width="1.5" transform="rotate(22 22 53)"/>
+  <ellipse cx="74" cy="53" rx="10" ry="6" fill="#281c58" stroke="#1a1209" stroke-width="1.5" transform="rotate(-22 74 53)"/>
+  <ellipse cx="48" cy="40" rx="31" ry="24" fill="url(#g)" stroke="#1a1209" stroke-width="2.4"/>
+  <path d="M48 17 L59 25 L55 39 L48 45 L41 39 L37 25Z" fill="url(#gem)" stroke="#1a1209" stroke-width="1.3" opacity="0.58"/>
+  <path d="M27 28 L37 25 L41 39 L31 47 L22 39Z" fill="#9ee8ff" opacity="0.28" stroke="#1a1209" stroke-width="1"/>
+  <path d="M69 28 L59 25 L55 39 L65 47 L74 39Z" fill="#9ee8ff" opacity="0.28" stroke="#1a1209" stroke-width="1"/>
+  <path d="M33 51 L41 39 L48 45 L48 61 L39 59Z" fill="#1b1544" opacity="0.34" stroke="#1a1209" stroke-width="0.9"/>
+  <path d="M63 51 L55 39 L48 45 L48 61 L57 59Z" fill="#1b1544" opacity="0.34" stroke="#1a1209" stroke-width="0.9"/>
+  <path d="M34 22 Q48 14 62 22" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" opacity="0.48"/>
+  <circle cx="48" cy="15" r="10" fill="#5478b8" stroke="#1a1209" stroke-width="2"/>
+  <circle cx="43" cy="14" r="3.8" fill="white" stroke="#1a1209" stroke-width="1.2"/>
+  <circle cx="44" cy="14" r="2.2" fill="#1a1209"/>
+  <circle cx="45" cy="13.2" r="0.8" fill="white"/>
+  <circle cx="53" cy="14" r="3.8" fill="white" stroke="#1a1209" stroke-width="1.2"/>
+  <circle cx="54" cy="14" r="2.2" fill="#1a1209"/>
+  <circle cx="55" cy="13.2" r="0.8" fill="white"/>
+  <path d="M43 20 Q48 24 53 20" fill="none" stroke="#1a1209" stroke-width="1.3" stroke-linecap="round"/>
+</svg>`,
+
+  /* ───────── 27. 폭풍길 왕관조개 · Tempest Pass Crown Clam ───────── */
+  "fish-tempest-pass-crown-clam": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <radialGradient id="g1" cx="38%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#f6f0d8"/>
+      <stop offset="58%" stop-color="#80b8c8"/>
+      <stop offset="100%" stop-color="#2b4a78"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="38%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#fff6a8"/>
+      <stop offset="100%" stop-color="#d89020"/>
+    </radialGradient>
+  </defs>
+  <path d="M13 44 Q19 63 48 64 Q77 63 83 44 Q76 55 48 56 Q20 55 13 44Z" fill="url(#g1)" stroke="#1a1209" stroke-width="2"/>
+  <path d="M13 44 Q15 22 35 16 L39 7 L48 17 L57 7 L61 16 Q81 22 83 44 Q73 33 48 31 Q23 33 13 44Z" fill="url(#g1)" stroke="#1a1209" stroke-width="2"/>
+  <path d="M35 16 L39 7 L48 17 L57 7 L61 16" fill="#fff6a8" stroke="#1a1209" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M48 17 Q51 31 51 45 M38 18 Q39 32 39 45 M58 18 Q57 32 57 45 M28 24 Q28 34 30 44 M68 24 Q68 34 66 44" fill="none" stroke="#1a1209" stroke-width="1" opacity="0.28"/>
+  <path d="M20 44 Q28 37 48 36 Q68 37 76 44 Q72 53 48 55 Q24 53 20 44Z" fill="#2b1a30" opacity="0.78"/>
+  <circle cx="48" cy="45" r="11" fill="url(#g2)" stroke="#1a1209" stroke-width="1.5"/>
+  <path d="M32 22 L43 34 L37 35 L51 51 L46 38 L54 38Z" fill="#fff6a8" stroke="#1a1209" stroke-width="1" stroke-linejoin="round" opacity="0.86"/>
+  <path d="M24 28 Q48 19 72 28" fill="none" stroke="white" stroke-width="2.3" stroke-linecap="round" opacity="0.42"/>
+  <circle cx="43" cy="43" r="2.2" fill="#1a1209" opacity="0.55"/>
+  <circle cx="53" cy="43" r="2.2" fill="#1a1209" opacity="0.55"/>
+  <path d="M43 49 Q48 52 53 49" fill="none" stroke="#1a1209" stroke-width="1.2" stroke-linecap="round"/>
+</svg>`,
+
+  /* ───────── 28. 시간정원 하늘고래 · Temporal Garden Skywhale ───────── */
+  "fish-temporal-garden-skywhale": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <radialGradient id="g" cx="54%" cy="38%" r="66%">
+      <stop offset="0%" stop-color="#f8f3c8"/>
+      <stop offset="55%" stop-color="#8cd0d8"/>
+      <stop offset="100%" stop-color="#5b58b8"/>
+    </radialGradient>
+    <linearGradient id="wake" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#88f0d8"/>
+      <stop offset="50%" stop-color="#fff0a8"/>
+      <stop offset="100%" stop-color="#c88cff"/>
+    </linearGradient>
+  </defs>
+  <path d="M72 16 Q82 5 92 10" fill="none" stroke="url(#wake)" stroke-width="3" stroke-linecap="round" opacity="0.84"/>
+  <path d="M70 20 Q82 10 94 18" fill="none" stroke="#88f0d8" stroke-width="2.5" stroke-linecap="round" opacity="0.72"/>
+  <path d="M12 40 L3 28 Q6 40 3 52 L12 46Z" fill="#5b58b8" stroke="#1a1209" stroke-width="1.5"/>
+  <ellipse cx="50" cy="40" rx="36" ry="23" fill="url(#g)" stroke="#1a1209" stroke-width="2.4"/>
+  <path d="M34 18 Q43 7 58 16" fill="#8cd0d8" stroke="#1a1209" stroke-width="1.5" stroke-linejoin="round"/>
+  <ellipse cx="72" cy="23" rx="6" ry="3.4" fill="#5b58b8" stroke="#1a1209" stroke-width="1.3"/>
+  <path d="M29 49 Q48 57 73 48" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.4"/>
+  <path d="M40 52 Q34 62 44 62" fill="#6b69c8" stroke="#1a1209" stroke-width="1.5"/>
+  <path d="M61 52 Q70 60 62 63" fill="#6b69c8" stroke="#1a1209" stroke-width="1.5"/>
+  <path d="M28 29 Q50 20 74 29" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.42"/>
+  <circle cx="72" cy="36" r="6.6" fill="white" stroke="#1a1209" stroke-width="1.5"/>
+  <circle cx="73" cy="36" r="4" fill="#1a1209"/>
+  <circle cx="74.5" cy="34.5" r="1.4" fill="white"/>
+  <path d="M61 47 Q68 52 75 47" fill="none" stroke="#1a1209" stroke-width="1.4" stroke-linecap="round"/>
+  <circle cx="38" cy="38" r="13" fill="none" stroke="#fff0a8" stroke-width="1.7" opacity="0.52"/>
+  <path d="M38 28 L40 38 L47 42" fill="none" stroke="#1a1209" stroke-width="1.1" stroke-linecap="round" opacity="0.42"/>
+  <circle cx="38" cy="38" r="1.8" fill="#1a1209" opacity="0.45"/>
+</svg>`,
+
+  /* ───────── 29. 오로라왕관 신화 갯민숭달팽이 · Aurora Crown Mythic Nudibranch ───────── */
+  "fish-aurora-crown-mythic-nudibranch": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 68">
+  <defs>
+    <radialGradient id="g" cx="46%" cy="42%" r="68%">
+      <stop offset="0%" stop-color="#fff7d8"/>
+      <stop offset="48%" stop-color="#ff8fd0"/>
+      <stop offset="100%" stop-color="#5a48b8"/>
+    </radialGradient>
+    <linearGradient id="frill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#88f0d8"/>
+      <stop offset="50%" stop-color="#fff0a8"/>
+      <stop offset="100%" stop-color="#c88cff"/>
+    </linearGradient>
+  </defs>
+  <path d="M24 28 Q22 18 25 10 M34 24 Q32 13 35 6 M44 22 Q43 11 46 4 M54 22 Q55 11 58 4 M64 24 Q66 13 67 6 M72 28 Q76 18 74 10" fill="none" stroke="url(#frill)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M15 46 Q18 28 34 23 Q49 18 65 23 Q82 28 85 46 Q80 59 62 63 Q48 66 34 62 Q18 58 15 46Z" fill="url(#g)" stroke="#1a1209" stroke-width="2.2"/>
+  <path d="M24 42 Q36 32 48 42 Q60 32 72 42" fill="none" stroke="#fff0a8" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+  <path d="M27 51 Q39 43 49 52 Q61 43 72 50" fill="none" stroke="#88f0d8" stroke-width="2.6" stroke-linecap="round" opacity="0.75"/>
+  <path d="M39 23 L43 11 L49 20 L55 9 L60 21 L66 12 L68 26" fill="url(#frill)" stroke="#1a1209" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M36 24 Q34 12 36 5" fill="none" stroke="#ff8fd0" stroke-width="6" stroke-linecap="round"/>
+  <path d="M36 24 Q34 12 36 5" fill="none" stroke="#fff0a8" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M60 24 Q63 12 62 5" fill="none" stroke="#ff8fd0" stroke-width="6" stroke-linecap="round"/>
+  <path d="M60 24 Q63 12 62 5" fill="none" stroke="#fff0a8" stroke-width="2.8" stroke-linecap="round"/>
+  <ellipse cx="72" cy="42" rx="12" ry="10" fill="#fff7d8" stroke="#1a1209" stroke-width="1.5"/>
+  <circle cx="68" cy="40" r="3.6" fill="white" stroke="#1a1209" stroke-width="1.2"/>
+  <circle cx="69" cy="40" r="2" fill="#1a1209"/>
+  <circle cx="70" cy="39" r="0.8" fill="white"/>
+  <circle cx="76" cy="40" r="3.6" fill="white" stroke="#1a1209" stroke-width="1.2"/>
+  <circle cx="77" cy="40" r="2" fill="#1a1209"/>
+  <circle cx="78" cy="39" r="0.8" fill="white"/>
+  <path d="M68 47 Q72 51 76 47" fill="none" stroke="#1a1209" stroke-width="1.2" stroke-linecap="round"/>
+</svg>`,
 };

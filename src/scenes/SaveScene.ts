@@ -91,6 +91,10 @@ export class SaveScene extends Phaser.Scene {
     addTextButton(this, x + 158, y + 26, "불러오기", () => {
       const loaded = loadGameFromSlot(slotId);
       if (loaded) {
+        if (!slot?.empty && slot?.level && loaded.level > slot.level) {
+          this.scene.restart({ message: `현재 진행도 Lv.${loaded.level}가 더 높아 낮은 슬롯으로 덮지 않았어요.` });
+          return;
+        }
         this.scene.start("Harbor");
       } else {
         this.scene.restart({ message: `슬롯 ${slotId}에는 불러올 기록이 없어요.` });

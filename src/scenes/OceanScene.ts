@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { addPlayerBoat, boatWakeTint } from "../game/boat";
 import { areas, fish } from "../game/content";
+import { ensureSvgTextures, fishTexturesForIds, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { playSoftTone } from "../game/audio";
 import { getBoatSpeed } from "../game/progression";
@@ -14,6 +15,19 @@ type Hotspot = {
   y: number;
   texture: string;
   label: string;
+};
+
+type OceanLifeSpot = {
+  fishId: string;
+  x: number;
+  y: number;
+  scale: number;
+  depth: number;
+  alpha: number;
+  driftX: number;
+  driftY: number;
+  duration: number;
+  flipX?: boolean;
 };
 
 const WORLD_WIDTH = 2680;
@@ -46,6 +60,59 @@ const hotspots: Hotspot[] = areas.map((area, index) => {
   };
 });
 
+const oceanLifeConfig: readonly OceanLifeSpot[] = [
+  { fishId: "sunny-minnow", x: 560, y: 720, scale: 0.72, depth: 7, alpha: 0.78, driftX: 32, driftY: -12, duration: 2300 },
+  { fishId: "sunny-minnow", x: 700, y: 825, scale: 0.58, depth: 6, alpha: 0.7, driftX: -24, driftY: -10, duration: 2600, flipX: true },
+  { fishId: "bubble-flounder", x: 470, y: 1160, scale: 0.62, depth: 6, alpha: 0.66, driftX: 18, driftY: -8, duration: 2800 },
+  { fishId: "sand-shrimp", x: 340, y: 1335, scale: 0.52, depth: 6, alpha: 0.7, driftX: 20, driftY: -14, duration: 2100 },
+  { fishId: "peach-seahorse", x: 820, y: 990, scale: 0.56, depth: 7, alpha: 0.75, driftX: -20, driftY: -18, duration: 2600, flipX: true },
+  { fishId: "moon-jelly", x: 760, y: 520, scale: 0.64, depth: 7, alpha: 0.72, driftX: 18, driftY: -26, duration: 3100 },
+  { fishId: "ribbon-squid", x: 940, y: 790, scale: 0.66, depth: 7, alpha: 0.78, driftX: 30, driftY: -16, duration: 2500 },
+  { fishId: "harbor-mackerel", x: 840, y: 830, scale: 0.58, depth: 6, alpha: 0.66, driftX: 34, driftY: -8, duration: 2400 },
+  { fishId: "shell-crab", x: 1010, y: 1010, scale: 0.54, depth: 6, alpha: 0.68, driftX: -18, driftY: -8, duration: 2700, flipX: true },
+  { fishId: "drum-octopus", x: 1125, y: 760, scale: 0.62, depth: 7, alpha: 0.72, driftX: 22, driftY: -18, duration: 3000 },
+  { fishId: "sleepy-ray", x: 1110, y: 915, scale: 0.72, depth: 7, alpha: 0.66, driftX: -30, driftY: -12, duration: 3300, flipX: true },
+  { fishId: "candy-puffer", x: 1085, y: 665, scale: 0.64, depth: 7, alpha: 0.78, driftX: 26, driftY: -14, duration: 2900 },
+  { fishId: "starfish-pal", x: 1520, y: 360, scale: 0.6, depth: 7, alpha: 0.72, driftX: -22, driftY: -12, duration: 3200, flipX: true },
+  { fishId: "coral-tang", x: 1260, y: 610, scale: 0.68, depth: 7, alpha: 0.8, driftX: 28, driftY: -12, duration: 2700 },
+  { fishId: "ribbon-eel", x: 1370, y: 915, scale: 0.66, depth: 7, alpha: 0.74, driftX: -34, driftY: -16, duration: 3100, flipX: true },
+  { fishId: "pearl-clam", x: 1475, y: 1295, scale: 0.58, depth: 7, alpha: 0.7, driftX: 16, driftY: -10, duration: 2800 },
+  { fishId: "pearl-turtle", x: 1550, y: 1370, scale: 0.7, depth: 7, alpha: 0.72, driftX: -28, driftY: -12, duration: 3400, flipX: true },
+  { fishId: "lantern-angler", x: 1650, y: 1180, scale: 0.64, depth: 8, alpha: 0.76, driftX: 24, driftY: -18, duration: 3000 },
+  { fishId: "sea-bunny", x: 1330, y: 1160, scale: 0.58, depth: 7, alpha: 0.76, driftX: -20, driftY: -14, duration: 2600, flipX: true },
+  { fishId: "rainbow-whale", x: 1605, y: 1125, scale: 0.92, depth: 8, alpha: 0.88, driftX: 56, driftY: -22, duration: 3700 },
+  { fishId: "misty-fjord-drifter", x: 510, y: 455, scale: 0.6, depth: 7, alpha: 0.68, driftX: 24, driftY: -16, duration: 2800 },
+  { fishId: "misty-fjord-lantern-eel", x: 655, y: 610, scale: 0.52, depth: 6, alpha: 0.62, driftX: -30, driftY: -14, duration: 3200, flipX: true },
+  { fishId: "kelp-forest-needlefish", x: 1100, y: 345, scale: 0.62, depth: 7, alpha: 0.68, driftX: 34, driftY: -10, duration: 2500 },
+  { fishId: "kelp-forest-velvet-turtle", x: 1265, y: 525, scale: 0.64, depth: 7, alpha: 0.66, driftX: -22, driftY: -12, duration: 3400, flipX: true },
+  { fishId: "basalt-cove-veil-ray", x: 1760, y: 560, scale: 0.7, depth: 7, alpha: 0.68, driftX: 30, driftY: -16, duration: 3100 },
+  { fishId: "basalt-cove-crown-clam", x: 1950, y: 700, scale: 0.54, depth: 6, alpha: 0.64, driftX: -18, driftY: -10, duration: 2800, flipX: true },
+  { fishId: "pearl-lagoon-comet-squid", x: 2075, y: 1005, scale: 0.64, depth: 7, alpha: 0.7, driftX: 28, driftY: -18, duration: 2700 },
+  { fishId: "pearl-lagoon-mosaic-crab", x: 2225, y: 1160, scale: 0.56, depth: 6, alpha: 0.66, driftX: -20, driftY: -10, duration: 3000, flipX: true },
+  { fishId: "storm-bank-veil-ray", x: 1515, y: 1480, scale: 0.72, depth: 7, alpha: 0.72, driftX: 34, driftY: -18, duration: 3300 },
+  { fishId: "storm-bank-lantern-eel", x: 1700, y: 1560, scale: 0.58, depth: 7, alpha: 0.68, driftX: -28, driftY: -16, duration: 2900, flipX: true },
+  { fishId: "moonlit-current-comet-squid", x: 735, y: 1450, scale: 0.64, depth: 7, alpha: 0.72, driftX: 28, driftY: -20, duration: 3000 },
+  { fishId: "moonlit-current-skywhale", x: 930, y: 1605, scale: 0.82, depth: 7, alpha: 0.7, driftX: -42, driftY: -18, duration: 3800, flipX: true },
+  { fishId: "amber-archipelago-drifter", x: 2280, y: 345, scale: 0.6, depth: 7, alpha: 0.7, driftX: 28, driftY: -12, duration: 2700 },
+  { fishId: "amber-archipelago-mosaic-crab", x: 2440, y: 515, scale: 0.56, depth: 6, alpha: 0.66, driftX: -20, driftY: -10, duration: 3000, flipX: true },
+  { fishId: "glacier-shelf-velvet-turtle", x: 2355, y: 1410, scale: 0.7, depth: 7, alpha: 0.7, driftX: 30, driftY: -14, duration: 3500 },
+  { fishId: "glacier-shelf-needlefish", x: 2505, y: 1560, scale: 0.6, depth: 7, alpha: 0.68, driftX: -34, driftY: -12, duration: 2600, flipX: true },
+  { fishId: "lantern-trench-lantern-eel", x: 1225, y: 955, scale: 0.62, depth: 8, alpha: 0.76, driftX: 30, driftY: -18, duration: 3100 },
+  { fishId: "lantern-trench-mythic-nudibranch", x: 1405, y: 1085, scale: 0.62, depth: 8, alpha: 0.72, driftX: -24, driftY: -16, duration: 3400, flipX: true },
+  { fishId: "aurora-reef-skywhale", x: 1970, y: 1500, scale: 0.86, depth: 8, alpha: 0.74, driftX: 44, driftY: -20, duration: 3900 },
+  { fishId: "aurora-reef-mythic-nudibranch", x: 2135, y: 1640, scale: 0.68, depth: 8, alpha: 0.72, driftX: -26, driftY: -18, duration: 3200, flipX: true },
+  { fishId: "starlit-offshore-drifter", x: 1740, y: 1245, scale: 0.64, depth: 7, alpha: 0.7, driftX: 28, driftY: -14, duration: 2700 },
+  { fishId: "glass-trench-needlefish", x: 1890, y: 1335, scale: 0.6, depth: 7, alpha: 0.68, driftX: -34, driftY: -12, duration: 2600, flipX: true },
+  { fishId: "tempest-pass-veil-ray", x: 2025, y: 1215, scale: 0.74, depth: 8, alpha: 0.74, driftX: 36, driftY: -18, duration: 3300 },
+  { fishId: "temporal-garden-comet-squid", x: 2165, y: 1340, scale: 0.7, depth: 8, alpha: 0.74, driftX: -30, driftY: -20, duration: 3100, flipX: true },
+  { fishId: "aurora-crown-mosaic-crab", x: 2305, y: 1215, scale: 0.62, depth: 7, alpha: 0.7, driftX: 22, driftY: -10, duration: 3000 },
+  { fishId: "starlit-offshore-lantern-eel", x: 1840, y: 1515, scale: 0.62, depth: 8, alpha: 0.72, driftX: -30, driftY: -16, duration: 3000, flipX: true },
+  { fishId: "glass-trench-velvet-turtle", x: 2005, y: 1650, scale: 0.76, depth: 8, alpha: 0.74, driftX: 32, driftY: -14, duration: 3600 },
+  { fishId: "tempest-pass-crown-clam", x: 2200, y: 1530, scale: 0.58, depth: 7, alpha: 0.7, driftX: -18, driftY: -10, duration: 2900, flipX: true },
+  { fishId: "temporal-garden-skywhale", x: 2420, y: 1320, scale: 0.9, depth: 8, alpha: 0.76, driftX: 48, driftY: -20, duration: 4000 },
+  { fishId: "aurora-crown-mythic-nudibranch", x: 2505, y: 1545, scale: 0.7, depth: 8, alpha: 0.74, driftX: -28, driftY: -18, duration: 3300, flipX: true },
+];
+
 export class OceanScene extends Phaser.Scene {
   private state!: PlayerState;
   private boat!: Phaser.GameObjects.Container;
@@ -71,6 +138,29 @@ export class OceanScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setZoom(1);
 
+    const loadingBg = this.add.rectangle(480, 270, 960, 540, 0xb3edf2, 1).setScrollFactor(0).setDepth(90);
+    const loadingText = this.add
+      .text(480, 270, "바다 지도를 펼치는 중...", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "24px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        backgroundColor: "rgba(255,251,239,0.72)",
+        padding: { x: 16, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(91);
+
+    void this.renderWhenReady([loadingBg, loadingText]);
+  }
+
+  private async renderWhenReady(loadingObjects: Phaser.GameObjects.GameObject[]) {
+    await ensureSvgTextures(this, [
+      ...playerPresentationTextures(this.state),
+      ...fishTexturesForIds(this.oceanFishIds()),
+    ]);
+    loadingObjects.forEach((object) => object.destroy());
     this.drawSea();
     this.addMapObjects();
     this.addBoat();
@@ -79,7 +169,15 @@ export class OceanScene extends Phaser.Scene {
     this.setupInput();
   }
 
+  private oceanFishIds() {
+    return [...new Set(oceanLifeConfig.map((spot) => spot.fishId))];
+  }
+
   update(_: number, delta: number) {
+    if (!this.boat) {
+      return;
+    }
+
     this.animateSea(delta);
     this.moveBoat(delta);
     this.updateNearbyPrompt();
@@ -102,26 +200,7 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private addSeaLife() {
-    for (const point of [
-      [610, 730, "fish-sunny-minnow", 0.55],
-      [730, 520, "fish-moon-jelly", 0.48],
-      [940, 790, "fish-ribbon-squid", 0.5],
-      [1085, 665, "fish-candy-puffer", 0.46],
-      [1260, 610, "fish-coral-tang", 0.52],
-      [1370, 915, "fish-ribbon-eel", 0.5],
-      [1520, 360, "fish-starfish-pal", 0.44],
-    ] as const) {
-      const friend = this.add.image(point[0], point[1], point[2]).setScale(point[3]).setDepth(4).setAlpha(0.55);
-      this.tweens.add({
-        targets: friend,
-        x: friend.x + 26,
-        y: friend.y - 12,
-        duration: 2200 + point[0],
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.inOut",
-      });
-    }
+    const fishById = new Map(fish.map((entry) => [entry.id, entry]));
 
     for (const point of [
       [320, 520],
@@ -146,21 +225,22 @@ export class OceanScene extends Phaser.Scene {
       });
     }
 
-    hotspots.slice(3).forEach((hotspot, index) => {
-      const friendDefinition = fish.find((entry) => hotspot.area.fishIds.includes(entry.id));
+    oceanLifeConfig.forEach((spot, index) => {
+      const friendDefinition = fishById.get(spot.fishId);
       if (!friendDefinition) {
         return;
       }
       const friend = this.add
-        .image(hotspot.x + (index % 2 === 0 ? 96 : -112), hotspot.y + 76, friendDefinition.assetKey)
-        .setScale(0.38 + (index % 4) * 0.04)
-        .setDepth(4)
-        .setAlpha(0.48);
+        .image(spot.x, spot.y, friendDefinition.assetKey)
+        .setScale(spot.scale)
+        .setDepth(spot.depth)
+        .setAlpha(spot.alpha);
+      friend.setFlipX(Boolean(spot.flipX));
       this.tweens.add({
         targets: friend,
-        x: friend.x + (index % 2 === 0 ? 34 : -34),
-        y: friend.y - 18,
-        duration: 2400 + index * 120,
+        x: friend.x + spot.driftX,
+        y: friend.y + spot.driftY,
+        duration: spot.duration + (index % 5) * 90,
         yoyo: true,
         repeat: -1,
         ease: "Sine.inOut",

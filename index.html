@@ -2,11 +2,26 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#bdeedc" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="반짝바다 낚시단" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>반짝바다 낚시단</title>
   </head>
   <body>
     <main id="app" aria-label="반짝바다 낚시단 게임"></main>
+    <aside id="orientation-hint" aria-hidden="true">
+      <div class="phone-tilt" aria-hidden="true">
+        <span></span>
+      </div>
+      <strong>가로로 돌려서 항해해요</strong>
+      <p>모바일에서는 가로 화면이 가장 넓고 편해요.</p>
+    </aside>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

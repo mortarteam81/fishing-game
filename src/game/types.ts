@@ -1,4 +1,45 @@
-export type Rarity = "common" | "uncommon" | "rare" | "special";
+export type Rarity = "common" | "uncommon" | "rare" | "epic" | "mythic" | "legendary" | "ancient";
+
+export type SeaFriendFamily =
+  | "fish"
+  | "crustacean"
+  | "mollusk"
+  | "jelly"
+  | "whale"
+  | "reptile"
+  | "echinoderm"
+  | "deep"
+  | "spirit";
+
+export type SeaFriendHabitat =
+  | "coastal"
+  | "pier"
+  | "coral"
+  | "mist"
+  | "kelp"
+  | "basalt"
+  | "pearl"
+  | "storm"
+  | "moon"
+  | "amber"
+  | "glacier"
+  | "trench"
+  | "aurora"
+  | "legend"
+  | "ancient";
+
+export type SeaFriendSize = "tiny" | "small" | "medium" | "large" | "giant";
+
+export type SeaFriendBehavior =
+  | "swift"
+  | "shy"
+  | "steady"
+  | "heavy"
+  | "drifting"
+  | "nocturnal"
+  | "erratic"
+  | "glowing"
+  | "ancient";
 
 export type AreaTheme =
   | "beach"
@@ -55,6 +96,10 @@ export type FishDefinition = {
   name: string;
   areaIds: string[];
   rarity: Rarity;
+  family: SeaFriendFamily;
+  habitatTags: SeaFriendHabitat[];
+  size: SeaFriendSize;
+  behaviorTags: SeaFriendBehavior[];
   baseShells: number;
   xp: number;
   spawnWeight: number;
@@ -87,6 +132,9 @@ export type ItemDefinition = {
     mutationChance?: number;
     boatSpeed?: number;
     areaUnlock?: string;
+    rarityBoosts?: Partial<Record<Rarity, number>>;
+    familyBoost?: SeaFriendFamily;
+    habitatBoost?: SeaFriendHabitat;
   };
 };
 

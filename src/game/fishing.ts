@@ -1,5 +1,5 @@
 import { areas, fish } from "./content";
-import { getLureSpeed, getMutationChance, getRareBoost, getRodEase } from "./progression";
+import { getFishAffinityBoost, getLureSpeed, getMutationChance, getRareBoost, getRodEase } from "./progression";
 import type {
   CatchMutation,
   CatchQuality,
@@ -13,7 +13,20 @@ const rarityMultiplier: Record<FishDefinition["rarity"], number> = {
   common: 1,
   uncommon: 1.15,
   rare: 1.35,
-  special: 1.7,
+  epic: 1.58,
+  mythic: 1.86,
+  legendary: 2.25,
+  ancient: 2.75,
+};
+
+const rarityRank: Record<FishDefinition["rarity"], number> = {
+  common: 1,
+  uncommon: 2,
+  rare: 3,
+  epic: 4,
+  mythic: 5,
+  legendary: 6,
+  ancient: 7,
 };
 
 export function startFishing(areaId: string, state: PlayerState, random = Math.random): FishingAttempt {
@@ -21,11 +34,11 @@ export function startFishing(areaId: string, state: PlayerState, random = Math.r
   const rareBoost = getRareBoost(state);
   const candidates = fish.filter((entry) => area.fishIds.includes(entry.id));
   const weighted = candidates.map((entry) => {
-    const boost =
-      entry.rarity === "rare" || entry.rarity === "special" ? 1 + rareBoost : 1;
+    const broadBoost = rarityRank[entry.rarity] >= rarityRank.rare ? rareBoost : 0;
+    const affinityBoost = getFishAffinityBoost(state, entry);
     return {
       fish: entry,
-      weight: entry.spawnWeight * boost,
+      weight: entry.spawnWeight * (1 + broadBoost + affinityBoost),
     };
   });
   const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
@@ -98,7 +111,7 @@ function rollMutation(
   random: () => number,
 ): CatchMutation | undefined {
   const qualityChance = quality === "sparkle" ? 0.24 : quality === "great" ? 0.13 : 0.06;
-  const rarityChance = fish.rarity === "special" ? 0.08 : fish.rarity === "rare" ? 0.04 : 0;
+  const rarityChance = Math.max(0, rarityRank[fish.rarity] - rarityRank.uncommon) * 0.024;
   const branchChance = state.storyFlags["coral-guardian"] ? 0.04 : 0;
   const gearChance = getMutationChance(state);
   const chance = Math.min(0.56, qualityChance + rarityChance + getRareBoost(state) * 0.16 + branchChance + gearChance);

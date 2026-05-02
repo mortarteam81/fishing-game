@@ -4,9 +4,8 @@ import type { CaptainStyle, PlayerState } from "./types";
 const STORAGE_KEY = "banjjakbada-save-v1";
 const SAVE_SLOT_PREFIX = "banjjakbada-save-slot-";
 const SAVE_SLOT_COUNT = 3;
-const COOKIE_CHUNK_SIZE = 2800;
 const COOKIE_MAX_CHUNKS = 10;
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+const LOCAL_SAVE_ENDPOINT = "/api/local-save";
 
 export type SaveSlotSummary = {
   slotId: number;
@@ -56,18 +55,13 @@ export function loadGame(): PlayerState {
     return createInitialState();
   }
 
-  const raw = localStorage.getItem(STORAGE_KEY);
-  const parsedFromLocal = parseStoredState(raw);
-  const parsed = parsedFromLocal ?? readCookieBackup(STORAGE_KEY);
+  const parsed = bestStoredState([parseStoredState(localStorage.getItem(STORAGE_KEY)), ...readLegacyCookieBackups()]);
   if (!parsed) {
     return createInitialState();
   }
-  if (parsedFromLocal) {
-    writeCookieBackup(STORAGE_KEY, parsedFromLocal);
-  } else {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-  }
 
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+  clearLegacyCookieBackups();
   return normalizeStoredState(parsed);
 }
 
@@ -78,7 +72,7 @@ export function saveGame(state: PlayerState): void {
 
   const stored = { ...state, saveVersion: 3 };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
-  writeCookieBackup(STORAGE_KEY, stored);
+  writeServerBackup(STORAGE_KEY, stored);
 }
 
 export function resetGame(): PlayerState {
@@ -96,16 +90,9 @@ export function getSaveSlots(): SaveSlotSummary[] {
     const slotId = index + 1;
     const key = slotKey(slotId);
     const raw = localStorage.getItem(key);
-    const parsedFromLocal = parseStoredState(raw);
-    const parsed = parsedFromLocal ?? readCookieBackup(key);
+    const parsed = parseStoredState(raw);
     if (!parsed) {
       return { slotId, empty: true };
-    }
-
-    if (parsedFromLocal) {
-      writeCookieBackup(key, parsedFromLocal);
-    } else {
-      localStorage.setItem(key, JSON.stringify(parsed));
     }
 
     const state = normalizeStoredState(parsed);
@@ -129,7 +116,7 @@ export function saveGameToSlot(slotId: number, state: PlayerState): void {
   const key = slotKey(slotId);
   const stored = { ...state, saveVersion: 3, savedAt: new Date().toISOString() };
   localStorage.setItem(key, JSON.stringify(stored));
-  writeCookieBackup(key, stored);
+  writeServerBackup(key, stored);
 }
 
 export function loadGameFromSlot(slotId: number): PlayerState | undefined {
@@ -139,24 +126,66 @@ export function loadGameFromSlot(slotId: number): PlayerState | undefined {
 
   const key = slotKey(slotId);
   const raw = localStorage.getItem(key);
-  const parsedFromLocal = parseStoredState(raw);
-  const parsed = parsedFromLocal ?? readCookieBackup(key);
+  const parsed = parseStoredState(raw);
   if (!parsed) {
     return undefined;
   }
-  if (parsedFromLocal) {
-    writeCookieBackup(key, parsedFromLocal);
-  } else {
-    localStorage.setItem(key, JSON.stringify(parsed));
-  }
 
-  const state = normalizeStoredState(parsed);
+  const current = parseStoredState(localStorage.getItem(STORAGE_KEY));
+  const state = normalizeStoredState(bestStoredState([current, parsed]) ?? parsed);
   saveGame(state);
   return state;
 }
 
+export async function hydrateGameBackup(): Promise<void> {
+  if (typeof localStorage === "undefined") {
+    return;
+  }
+
+  try {
+    const response = await fetch(LOCAL_SAVE_ENDPOINT, { method: "GET" });
+    if (!response.ok) {
+      return;
+    }
+    const backups = (await response.json()) as Record<string, StoredPlayerState>;
+    const keys = storageKeys();
+    const allCandidates: StoredPlayerState[] = [];
+
+    for (const key of keys) {
+      const backup = backups[key];
+      const bestForKey = bestStoredState([
+        parseStoredState(localStorage.getItem(key)),
+        backup ? parseStoredState(JSON.stringify(backup)) : undefined,
+        readLegacyCookieBackup(key),
+      ]);
+
+      if (!bestForKey) {
+        continue;
+      }
+
+      allCandidates.push(bestForKey);
+      localStorage.setItem(key, JSON.stringify(bestForKey));
+      writeServerBackup(key, bestForKey);
+    }
+
+    const bestOverall = bestStoredState(allCandidates);
+    const current = parseStoredState(localStorage.getItem(STORAGE_KEY));
+    if (bestOverall && progressScore(bestOverall) > progressScore(current)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(bestOverall));
+      writeServerBackup(STORAGE_KEY, bestOverall);
+    }
+    clearLegacyCookieBackups();
+  } catch {
+    // The static production build may not expose the dev-only backup endpoint.
+  }
+}
+
 function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   const initial = createInitialState();
+  const level = parsed.level ?? initial.level;
+  const levelUnlockedAreaIds = areas
+    .filter((area) => area.requiredLevel <= level)
+    .map((area) => area.id);
   return {
     ...initial,
     ...parsed,
@@ -169,7 +198,7 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
     equippedBoatId: parsed.equippedBoatId ?? "harbor-skiff",
     ownedItemIds: Array.from(new Set([...(parsed.ownedItemIds ?? []), "twig-rod", "harbor-skiff"])),
     unlockedAreaIds: Array.from(
-      new Set([...(initial.unlockedAreaIds ?? []), ...(parsed.unlockedAreaIds ?? [])]),
+      new Set([...(initial.unlockedAreaIds ?? []), ...levelUnlockedAreaIds, ...(parsed.unlockedAreaIds ?? [])]),
     ),
     questProgress: {
       ...initial.questProgress,
@@ -198,6 +227,10 @@ function slotKey(slotId: number): string {
   return `${SAVE_SLOT_PREFIX}${slotId}`;
 }
 
+function storageKeys(): string[] {
+  return [STORAGE_KEY, ...Array.from({ length: SAVE_SLOT_COUNT }, (_, index) => slotKey(index + 1))];
+}
+
 function parseStoredState(raw: string | null): StoredPlayerState | undefined {
   if (!raw) {
     return undefined;
@@ -214,23 +247,45 @@ function parseStoredState(raw: string | null): StoredPlayerState | undefined {
   }
 }
 
-function writeCookieBackup(key: string, value: StoredPlayerState): void {
-  if (typeof document === "undefined") {
+function writeServerBackup(key: string, value: StoredPlayerState): void {
+  if (typeof fetch === "undefined") {
     return;
   }
 
-  const encoded = encodeURIComponent(encodePayload(JSON.stringify(value)));
-  const chunks = encoded.match(new RegExp(`.{1,${COOKIE_CHUNK_SIZE}}`, "g")) ?? [];
-  chunks.slice(0, COOKIE_MAX_CHUNKS).forEach((chunk, index) => {
-    document.cookie = `${cookieChunkName(key, index)}=${chunk}; Max-Age=${COOKIE_MAX_AGE}; Path=/; SameSite=Lax`;
-  });
-
-  for (let index = chunks.length; index < COOKIE_MAX_CHUNKS; index += 1) {
-    document.cookie = `${cookieChunkName(key, index)}=; Max-Age=0; Path=/; SameSite=Lax`;
-  }
+  void fetch(LOCAL_SAVE_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key, value }),
+  }).catch(() => undefined);
 }
 
-function readCookieBackup(key: string): StoredPlayerState | undefined {
+function bestStoredState(candidates: Array<StoredPlayerState | undefined>): StoredPlayerState | undefined {
+  return candidates
+    .filter((candidate): candidate is StoredPlayerState => Boolean(candidate))
+    .sort((left, right) => progressScore(right) - progressScore(left))[0];
+}
+
+function progressScore(value: StoredPlayerState | undefined): number {
+  if (!value) {
+    return 0;
+  }
+
+  const collectionCount = Object.values(value.collection ?? {}).reduce((sum, count) => sum + count, 0);
+  return (
+    (value.level ?? 1) * 100000 +
+    (value.xp ?? 0) * 100 +
+    collectionCount * 50 +
+    (value.ownedItemIds?.length ?? 0) * 20 +
+    (value.unlockedAreaIds?.length ?? 0) * 20 +
+    (value.shells ?? 0)
+  );
+}
+
+function readLegacyCookieBackups(): Array<StoredPlayerState | undefined> {
+  return storageKeys().map((key) => readLegacyCookieBackup(key));
+}
+
+function readLegacyCookieBackup(key: string): StoredPlayerState | undefined {
   if (typeof document === "undefined") {
     return undefined;
   }
@@ -248,7 +303,7 @@ function readCookieBackup(key: string): StoredPlayerState | undefined {
 
   let encoded = "";
   for (let index = 0; index < COOKIE_MAX_CHUNKS; index += 1) {
-    const chunk = cookies[cookieChunkName(key, index)];
+    const chunk = cookies[`${key}-backup-${index}`];
     if (!chunk) {
       break;
     }
@@ -266,17 +321,16 @@ function readCookieBackup(key: string): StoredPlayerState | undefined {
   }
 }
 
-function cookieChunkName(key: string, index: number): string {
-  return `${key}-backup-${index}`;
-}
+function clearLegacyCookieBackups(): void {
+  if (typeof document === "undefined") {
+    return;
+  }
 
-function encodePayload(value: string): string {
-  const bytes = new TextEncoder().encode(value);
-  let binary = "";
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return btoa(binary);
+  for (const key of storageKeys()) {
+    for (let index = 0; index < COOKIE_MAX_CHUNKS; index += 1) {
+      document.cookie = `${key}-backup-${index}=; Max-Age=0; Path=/; SameSite=Lax`;
+    }
+  }
 }
 
 function decodePayload(value: string): string {

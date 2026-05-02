@@ -1,11 +1,12 @@
 import Phaser from "phaser";
-import { boatCosmeticTint, boatItemTint } from "../game/boat";
 import { items } from "../game/content";
+import { ensureSvgTextures, itemPreviewTexture } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { buyItem, canBuyItem, equipItem, refreshQuestCompletion } from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
+import { boatMapTextureKey, itemIconTextureKey } from "../game/textureKeys";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
-import type { ItemDefinition, PlayerState } from "../game/types";
+import type { ItemDefinition, PlayerState, Rarity, SeaFriendFamily, SeaFriendHabitat } from "../game/types";
 
 type ExchangeCategory = "rod" | "bait" | "boat" | "boatCosmetic";
 
@@ -17,6 +18,46 @@ const categories: { id: ExchangeCategory; label: string }[] = [
 ];
 
 const PAGE_SIZE = 4;
+
+const rarityEffectLabel: Record<Rarity, string> = {
+  common: "흔함",
+  uncommon: "가끔",
+  rare: "희귀",
+  epic: "영웅",
+  mythic: "환상",
+  legendary: "전설",
+  ancient: "고대",
+};
+
+const familyEffectLabel: Record<SeaFriendFamily, string> = {
+  fish: "어류",
+  crustacean: "갑각류",
+  mollusk: "연체류",
+  jelly: "해파리류",
+  whale: "고래류",
+  reptile: "파충류",
+  echinoderm: "극피류",
+  deep: "심해류",
+  spirit: "정령류",
+};
+
+const habitatEffectLabel: Record<SeaFriendHabitat, string> = {
+  coastal: "연안",
+  pier: "방파제",
+  coral: "산호",
+  mist: "안개",
+  kelp: "해초",
+  basalt: "현무암",
+  pearl: "진주",
+  storm: "폭풍",
+  moon: "달빛",
+  amber: "노을",
+  glacier: "빙하",
+  trench: "해구",
+  aurora: "오로라",
+  legend: "전설",
+  ancient: "고대",
+};
 
 export class ExchangeScene extends Phaser.Scene {
   private state!: PlayerState;
@@ -48,7 +89,7 @@ export class ExchangeScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.addCategoryTabs();
-    this.addItemGrid();
+    void this.addItemGrid();
 
     addTextButton(this, 92, 500, "항구", () => this.scene.start("Harbor"), {
       width: 120,
@@ -78,14 +119,27 @@ export class ExchangeScene extends Phaser.Scene {
     });
   }
 
-  private addItemGrid() {
+  private async addItemGrid() {
     const filtered = items.filter((item) => item.kind === this.category);
     const maxPage = Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1);
     this.page = Phaser.Math.Clamp(this.page, 0, maxPage);
+    const visibleItems = filtered.slice(this.page * PAGE_SIZE, this.page * PAGE_SIZE + PAGE_SIZE);
+    const loadingText = this.add
+      .text(480, 284, "장비 이미지를 준비하는 중...", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "20px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        backgroundColor: "rgba(255,251,239,0.72)",
+        padding: { x: 14, y: 7 },
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
 
-    filtered
-      .slice(this.page * PAGE_SIZE, this.page * PAGE_SIZE + PAGE_SIZE)
-      .forEach((item, index) => this.addItemCard(item, index));
+    await ensureSvgTextures(this, visibleItems.flatMap(itemPreviewTexture));
+    loadingText.destroy();
+
+    visibleItems.forEach((item, index) => this.addItemCard(item, index));
 
     this.add
       .text(480, 500, `${this.page + 1} / ${maxPage + 1}`, {
@@ -125,18 +179,7 @@ export class ExchangeScene extends Phaser.Scene {
       this.state.equippedBoatCosmeticId === item.id;
     addPanel(this, x, y, 340, 100, owned ? PALETTE.paper : PALETTE.warmCream);
     const icon = this.add.image(x - 145, y + 8, this.itemIcon(item)).setScale(item.kind === "boat" ? 0.58 : 0.42);
-    if (item.kind === "boat") {
-      icon.setTint(boatItemTint(item.id));
-    }
-    if (item.kind === "rod") {
-      icon.setTint(this.rodTint(item.id));
-    }
-    if (item.kind === "bait") {
-      icon.setTint(this.gearTint(item.id));
-    }
-    if (item.kind === "boatCosmetic") {
-      icon.setTint(boatCosmeticTint(item.id));
-    }
+    icon.setAlpha(owned ? 1 : 0.82);
 
     this.add
       .text(x - 110, y - 34, item.name, {
@@ -191,16 +234,10 @@ export class ExchangeScene extends Phaser.Scene {
   }
 
   private itemIcon(item: ItemDefinition) {
-    if (item.kind === "rod") {
-      return "icon-rod";
-    }
-    if (item.kind === "bait") {
-      return "icon-bait";
-    }
     if (item.kind === "boat") {
-      return "boat-map";
+      return boatMapTextureKey(item.id);
     }
-    return "icon-shop";
+    return itemIconTextureKey(item.id);
   }
 
   private effectLabel(item: ItemDefinition) {
@@ -216,42 +253,12 @@ export class ExchangeScene extends Phaser.Scene {
       effect.rareBoost ? `희귀 +${Math.round(effect.rareBoost * 100)}` : undefined,
       effect.mutationChance ? `변이 +${Math.round(effect.mutationChance * 100)}` : undefined,
       effect.boatSpeed ? `항해 +${Math.round(effect.boatSpeed * 100)}` : undefined,
+      effect.familyBoost ? `${familyEffectLabel[effect.familyBoost]} 유도` : undefined,
+      effect.habitatBoost ? `${habitatEffectLabel[effect.habitatBoost]} 유도` : undefined,
+      ...Object.entries(effect.rarityBoosts ?? {}).map(([rarity, boost]) => `${rarityEffectLabel[rarity as Rarity]} +${Math.round((boost ?? 0) * 100)}`),
     ].filter(Boolean);
 
     return parts.length > 0 ? parts.join(" · ") : "기본 장비";
   }
 
-  private rodTint(itemId: string) {
-    switch (itemId) {
-      case "sparkle-rod":
-        return PALETTE.butter;
-      case "captain-rod":
-        return PALETTE.coralDeep;
-      case "tideglass-rod":
-        return PALETTE.lagoon;
-      case "aurora-rod":
-        return PALETTE.lavender;
-      default:
-        return this.gearTint(itemId);
-    }
-  }
-
-  private gearTint(itemId: string) {
-    let hash = 0;
-    for (let i = 0; i < itemId.length; i += 1) {
-      hash = (hash * 31 + itemId.charCodeAt(i)) >>> 0;
-    }
-    const palette = [
-      PALETTE.driftwoodDark,
-      PALETTE.butter,
-      PALETTE.coralDeep,
-      PALETTE.lagoon,
-      PALETTE.lavender,
-      PALETTE.moss,
-      0xb9c3ff,
-      0xe0a253,
-      0x587281,
-    ];
-    return palette[hash % palette.length];
-  }
 }

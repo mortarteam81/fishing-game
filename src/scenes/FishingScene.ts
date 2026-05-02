@@ -4,8 +4,10 @@ import { getArea } from "../game/content";
 import { playSoftTone } from "../game/audio";
 import { getReelPower, recordCatch, recordConsolation, refreshQuestCompletion } from "../game/progression";
 import { resolveTiming, startFishing } from "../game/fishing";
+import { ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { loadGame, saveGame } from "../game/storage";
+import { itemIconTextureKey } from "../game/textureKeys";
 import { addHeader, addMuteButton, addOceanBackground, addTextButton } from "../game/ui";
 import type { CatchResult, FishingAttempt, PlayerState } from "../game/types";
 
@@ -44,7 +46,6 @@ export class FishingScene extends Phaser.Scene {
     addHeader(this, area?.name ?? "낚시터", this.state);
     addMuteButton(this);
 
-    this.addFishingSetPiece();
     this.add
       .text(480, 118, area?.flavor ?? "물결이 반짝이면 버튼을 눌러요.", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
@@ -56,12 +57,31 @@ export class FishingScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    const loadingText = this.add
+      .text(480, 330, "낚시 장비를 준비하는 중...", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "21px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        backgroundColor: "rgba(255,251,239,0.7)",
+        padding: { x: 14, y: 7 },
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
+
+    void this.renderFishingSetup(loadingText);
+  }
+
+  private async renderFishingSetup(loadingText: Phaser.GameObjects.Text) {
+    await ensureSvgTextures(this, playerPresentationTextures(this.state));
+    loadingText.destroy();
+    this.addFishingSetPiece();
     this.castButton = addTextButton(this, 480, 430, "낚시하기", () => this.castLine(), {
       width: 230,
       height: 72,
       fill: PALETTE.butter,
       fontSize: 28,
-      iconKey: "icon-rod",
+      iconKey: itemIconTextureKey(this.state.equippedRodId),
       iconScale: 0.5,
     });
 
@@ -207,8 +227,14 @@ export class FishingScene extends Phaser.Scene {
     }
 
     switch (this.attempt.fish.rarity) {
-      case "special":
+      case "ancient":
+        return 0.0074;
+      case "legendary":
+        return 0.0068;
+      case "mythic":
         return 0.0062;
+      case "epic":
+        return 0.0056;
       case "rare":
         return 0.0051;
       case "uncommon":
@@ -224,8 +250,14 @@ export class FishingScene extends Phaser.Scene {
     }
 
     switch (this.attempt.fish.rarity) {
-      case "special":
+      case "ancient":
+        return 138;
+      case "legendary":
+        return 124;
+      case "mythic":
         return 112;
+      case "epic":
+        return 96;
       case "rare":
         return 84;
       case "uncommon":
@@ -273,6 +305,11 @@ export class FishingScene extends Phaser.Scene {
     const landmark = area?.mapTexture ?? "map-island";
     this.add.image(738, 308, landmark).setScale(area?.theme === "pier" ? 1.05 : 0.92).setAlpha(0.86);
     addPlayerBoat(this, 210, 284, this.state, { scale: 0.98, depth: 5 });
+    this.add
+      .image(278, 266, itemIconTextureKey(this.state.equippedRodId))
+      .setScale(0.34)
+      .setRotation(0.72)
+      .setDepth(8);
 
     const line = this.add.graphics();
     line.lineStyle(this.rodLineWidth(), this.rodColor(), 0.54);

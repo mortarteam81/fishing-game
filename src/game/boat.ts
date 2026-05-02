@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { PALETTE } from "./palette";
+import { boatFlagTextureKey, boatMapTextureKey, boatSideTextureKey, captainTextureKey } from "./textureKeys";
 import type { CaptainStyle, PlayerState } from "./types";
 
 export type PlayerBoatOptions = {
@@ -21,16 +22,18 @@ export function addPlayerBoat(
   const mapMode = options.mapMode ?? false;
   const flagKey = boatCosmeticTexture(state.equippedBoatCosmeticId);
   const style = boatStyle(state.equippedBoatId);
-  const flagTint = boatCosmeticTint(state.equippedBoatCosmeticId);
 
   if (mapMode) {
     const boat = scene.add.container(x, y).setDepth(depth).setScale(scale);
-    boat.add(scene.add.image(0, 0, "boat-map").setTint(style.hullTint));
+    const mapKey = scene.textures.exists(boatMapTextureKey(state.equippedBoatId))
+      ? boatMapTextureKey(state.equippedBoatId)
+      : "boat-map";
+    boat.add(scene.add.image(0, 0, mapKey));
     if (style.glowTint) {
       boat.add(scene.add.ellipse(0, 38, 54, 16, style.glowTint, 0.24));
     }
     if (flagKey) {
-      boat.add(scene.add.image(12, -28, flagKey).setScale(0.48).setRotation(-0.22).setTint(flagTint));
+      boat.add(scene.add.image(12, -32, flagKey).setScale(0.5).setRotation(-0.2));
     }
     boat.setSize(108, 118);
     return boat;
@@ -38,14 +41,16 @@ export function addPlayerBoat(
 
   const boat = scene.add.container(x, y).setDepth(depth).setScale(scale);
   boat.add(scene.add.image(0, 50, "boat-shadow"));
-  boat.add(scene.add.image(0, 28, "boat-sail").setOrigin(0.5).setTint(style.cabinTint));
+  const sideKey = scene.textures.exists(boatSideTextureKey(state.equippedBoatId))
+    ? boatSideTextureKey(state.equippedBoatId)
+    : "boat";
+  boat.add(scene.add.image(0, 36, sideKey).setOrigin(0.5));
   if (style.glowTint) {
     boat.add(scene.add.ellipse(16, 88, 128, 14, style.glowTint, 0.18));
   }
   if (flagKey) {
-    boat.add(scene.add.image(-24, -30, flagKey).setScale(0.8).setRotation(-0.18).setTint(flagTint));
+    boat.add(scene.add.image(-28, -34, flagKey).setScale(0.74).setRotation(-0.18));
   }
-  boat.add(scene.add.image(0, 52, "boat-hull").setTint(style.hullTint));
 
   if (options.showCaptain ?? true) {
     boat.add(scene.add.ellipse(-62, 55, 34, 8, 0x102f3f, 0.22));
@@ -57,16 +62,7 @@ export function addPlayerBoat(
 }
 
 export function boatCosmeticTexture(itemId?: string): string | undefined {
-  switch (itemId) {
-    case "star-flag":
-      return "boat-flag-star";
-    case "harbor-pennant":
-      return "boat-flag-harbor";
-    case "coral-pennant":
-      return "boat-flag-coral";
-    default:
-      return itemId ? ["boat-flag-star", "boat-flag-harbor", "boat-flag-coral"][hashString(itemId) % 3] : undefined;
-  }
+  return itemId ? boatFlagTextureKey(itemId) : undefined;
 }
 
 export function boatCosmeticTint(itemId?: string): number {
@@ -126,6 +122,14 @@ export function addCaptainFigure(
   scale = 1,
 ): Phaser.GameObjects.Container {
   const figure = scene.add.container(x, y).setScale(scale);
+  const textureKey = captainTextureKey(captain);
+
+  if (scene.textures.exists(textureKey)) {
+    figure.add(scene.add.image(0, 0, textureKey).setOrigin(0.5));
+    figure.setSize(120, 190);
+    return figure;
+  }
+
   const g = scene.add.graphics();
 
   g.fillStyle(0x102f3f, 0.16);

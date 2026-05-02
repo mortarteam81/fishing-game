@@ -10,13 +10,40 @@ import { HarborScene } from "./scenes/HarborScene";
 import { OceanScene } from "./scenes/OceanScene";
 import { QuestScene } from "./scenes/QuestScene";
 import { SaveScene } from "./scenes/SaveScene";
+import { hydrateGameBackup } from "./game/storage";
 
-const parent = document.querySelector<HTMLElement>("#app");
+function syncViewportHeight() {
+  const height = window.visualViewport?.height ?? window.innerHeight;
+  document.documentElement.style.setProperty("--app-height", `${height}px`);
+}
 
-if (!parent) {
-  document.body.innerHTML = '<div class="fallback">게임을 시작할 공간을 찾지 못했어요.</div>';
-} else {
-  new Phaser.Game({
+function installMobileViewportFixes(game: Phaser.Game) {
+  const refreshScale = () => {
+    syncViewportHeight();
+    window.setTimeout(() => game.scale.refresh(), 80);
+  };
+
+  syncViewportHeight();
+  window.visualViewport?.addEventListener("resize", refreshScale);
+  window.addEventListener("resize", refreshScale);
+  window.addEventListener("orientationchange", refreshScale);
+  document.addEventListener(
+    "touchmove",
+    (event) => {
+      event.preventDefault();
+    },
+    { passive: false },
+  );
+}
+
+function startGame() {
+  const parent = document.querySelector<HTMLElement>("#app");
+  if (!parent) {
+    document.body.innerHTML = '<div class="fallback">게임을 시작할 공간을 찾지 못했어요.</div>';
+    return;
+  }
+
+  const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
     backgroundColor: "#bdeedc",
@@ -45,4 +72,8 @@ if (!parent) {
       SaveScene,
     ],
   });
+
+  installMobileViewportFixes(game);
 }
+
+void hydrateGameBackup().finally(startGame);

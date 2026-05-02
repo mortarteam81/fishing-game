@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { addPlayerBoat } from "../game/boat";
 import { areas } from "../game/content";
+import { ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import {
   applyStoryChoice,
@@ -26,6 +27,24 @@ export class HarborScene extends Phaser.Scene {
     addOceanBackground(this, "harbor");
     addHeader(this, "반짝바다 낚시단", this.state);
     addMuteButton(this);
+    const loadingText = this.add
+      .text(480, 302, "항구를 준비하는 중...", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "22px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        backgroundColor: "rgba(255,251,239,0.7)",
+        padding: { x: 14, y: 7 },
+      })
+      .setOrigin(0.5)
+      .setDepth(30);
+
+    void this.renderWhenReady(loadingText);
+  }
+
+  private async renderWhenReady(loadingText: Phaser.GameObjects.Text) {
+    await ensureSvgTextures(this, playerPresentationTextures(this.state));
+    loadingText.destroy();
     this.addBoat();
     this.addHeroPanel();
     this.addStoryChoicePanel();

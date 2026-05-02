@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { addCaptainFigure, addPlayerBoat } from "../game/boat";
 import { captainPresets, nextCaptainPreset } from "../game/character";
+import { allCaptainTextures, ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { loadGame, saveGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
@@ -17,7 +18,29 @@ export class CharacterScene extends Phaser.Scene {
     this.state = loadGame();
     addOceanBackground(this, "mist");
     addHeader(this, "선장 생성", this.state);
-    addMuteButton(this);
+    addMuteButton(this, 880, 82);
+
+    const loadingText = this.add
+      .text(480, 290, "선장 의상을 준비하는 중...", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "22px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        backgroundColor: "rgba(255,251,239,0.72)",
+        padding: { x: 14, y: 7 },
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
+
+    void this.renderWhenReady(loadingText);
+  }
+
+  private async renderWhenReady(loadingText: Phaser.GameObjects.Text) {
+    await ensureSvgTextures(this, [
+      ...allCaptainTextures(),
+      ...playerPresentationTextures(this.state),
+    ]);
+    loadingText.destroy();
 
     addPanel(this, 260, 298, 360, 360, PALETTE.paper);
     this.add

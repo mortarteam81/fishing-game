@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { ensureSvgTextures, fishTexture } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
 import { loadGame } from "../game/storage";
@@ -24,6 +25,25 @@ export class CatchResultScene extends Phaser.Scene {
     addHeader(this, "만남 기록", this.state);
     addMuteButton(this);
     addPanel(this, 480, 262, 620, 330, PALETTE.paper);
+
+    const loadingText = this.add
+      .text(480, 262, "만남 기록을 펼치는 중...", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "21px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        backgroundColor: "rgba(255,251,239,0.72)",
+        padding: { x: 14, y: 7 },
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
+
+    void this.renderResult(loadingText);
+  }
+
+  private async renderResult(loadingText: Phaser.GameObjects.Text) {
+    await ensureSvgTextures(this, this.result.success ? fishTexture(this.result.fish) : []);
+    loadingText.destroy();
 
     if (this.result.success && this.result.fish) {
       this.add.image(480, 176, "sparkle-point").setScale(1.25).setAlpha(0.5);

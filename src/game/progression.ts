@@ -1,5 +1,6 @@
 import { areas, fish, getFish, getItem, getStoryChoice, items, quests, storyChoices } from "./content";
 import type {
+  FishDefinition,
   PlayerState,
   QuestDefinition,
   QuestStep,
@@ -133,12 +134,16 @@ export function getLureSpeed(state: PlayerState): number {
 }
 
 export function getReelPower(state: PlayerState): number {
-  return getItem(state.equippedRodId)?.effect?.reelPower ?? 0;
+  return (
+    (getItem(state.equippedRodId)?.effect?.reelPower ?? 0) +
+    (getItem(state.equippedBoatId)?.effect?.reelPower ?? 0)
+  );
 }
 
 export function getMutationChance(state: PlayerState): number {
   return (
     (getItem(state.equippedRodId)?.effect?.mutationChance ?? 0) +
+    (state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.mutationChance ?? 0) : 0) +
     (getItem(state.equippedBoatId)?.effect?.mutationChance ?? 0) +
     (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.mutationChance ?? 0) : 0)
   );
@@ -149,6 +154,27 @@ export function getBoatSpeed(state: PlayerState): number {
     (getItem(state.equippedBoatId)?.effect?.boatSpeed ?? 0) +
     (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.boatSpeed ?? 0) : 0)
   );
+}
+
+export function getFishAffinityBoost(state: PlayerState, fish: FishDefinition): number {
+  return [
+    getItem(state.equippedRodId),
+    state.equippedBaitId ? getItem(state.equippedBaitId) : undefined,
+    getItem(state.equippedBoatId),
+    state.equippedBoatCosmeticId ? getItem(state.equippedBoatCosmeticId) : undefined,
+  ].reduce((boost, item) => {
+    const effect = item?.effect;
+    if (!effect) {
+      return boost;
+    }
+
+    return (
+      boost +
+      (effect.familyBoost === fish.family ? 0.2 : 0) +
+      (effect.habitatBoost && fish.habitatTags.includes(effect.habitatBoost) ? 0.18 : 0) +
+      (effect.rarityBoosts?.[fish.rarity] ?? 0)
+    );
+  }, 0);
 }
 
 export function stepProgress(state: PlayerState, step: QuestStep): number {

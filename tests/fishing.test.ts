@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { startFishing, resolveTiming } from "../src/game/fishing";
+import { getFish } from "../src/game/content";
 import { createInitialState } from "../src/game/storage";
+import type { FishingAttempt } from "../src/game/types";
 
 describe("fishing loop", () => {
   it("creates a fishing attempt for the selected area", () => {
@@ -41,5 +43,23 @@ describe("fishing loop", () => {
     expect(result.success).toBe(true);
     expect(result.mutation?.id).toBe("aurora");
     expect(result.shells).toBeGreaterThan(attempt.fish.baseShells);
+  });
+
+  it("pays out a larger reward for the new ancient rarity tier", () => {
+    const state = createInitialState();
+    const ancientFriend = getFish("aurora-crown-mythic-nudibranch");
+    expect(ancientFriend?.rarity).toBe("ancient");
+
+    const attempt: FishingAttempt = {
+      areaId: "aurora-crown",
+      fish: ancientFriend!,
+      biteDelayMs: 500,
+      targetCenter: 0.5,
+      targetWidth: 0.3,
+    };
+    const result = resolveTiming(attempt, attempt.targetCenter, state, () => 1);
+
+    expect(result.success).toBe(true);
+    expect(result.shells).toBeGreaterThan(ancientFriend!.baseShells * 2);
   });
 });

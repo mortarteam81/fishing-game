@@ -6,8 +6,8 @@ describe("content data", () => {
     const fishIds = new Set(fish.map((entry) => entry.id));
     const areaIds = new Set(areas.map((entry) => entry.id));
 
-    expect(fish).toHaveLength(119);
-    expect(areas).toHaveLength(13);
+    expect(fish).toHaveLength(129);
+    expect(areas).toHaveLength(18);
     expect(fishIds.size).toBe(fish.length);
 
     for (const area of areas) {
@@ -18,6 +18,9 @@ describe("content data", () => {
     }
 
     for (const entry of fish) {
+      expect(entry.family).toBeTruthy();
+      expect(entry.habitatTags.length).toBeGreaterThan(0);
+      expect(entry.behaviorTags.length).toBeGreaterThan(0);
       expect(entry.areaIds.length).toBeGreaterThan(0);
       for (const areaId of entry.areaIds) {
         expect(areaIds.has(areaId)).toBe(true);
@@ -33,10 +36,11 @@ describe("content data", () => {
     const questIds = new Set(quests.map((entry) => entry.id));
 
     expect(itemIds.size).toBe(items.length);
-    expect(items.filter((item) => item.kind === "rod")).toHaveLength(35);
-    expect(items.filter((item) => item.kind === "boat")).toHaveLength(34);
-    expect(items.filter((item) => item.kind === "bait")).toHaveLength(32);
-    expect(items.filter((item) => item.kind === "boatCosmetic")).toHaveLength(33);
+    expect(items.filter((item) => item.kind === "rod")).toHaveLength(45);
+    expect(items.filter((item) => item.kind === "boat")).toHaveLength(39);
+    expect(items.filter((item) => item.kind === "bait")).toHaveLength(42);
+    expect(items.filter((item) => item.kind === "boatCosmetic")).toHaveLength(43);
+    expect(quests).toHaveLength(10);
     expect(questIds.size).toBe(quests.length);
 
     for (const quest of quests) {

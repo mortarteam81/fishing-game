@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 import { areas, fish as fishContent } from "../game/content";
+import { ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE } from "../game/palette";
 import { CREATURE_SVGS } from "../game/creatureSvgs";
+import { loadGame } from "../game/storage";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -17,11 +19,23 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.createFishTextures();
     this.createBoatTexture();
     this.createCharacterTexture();
     this.createOceanTextures();
     this.createUiIcons();
+    this.add
+      .text(480, 270, "바다 장비를 준비하는 중...", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "26px",
+        fontStyle: "900",
+        color: "#183346",
+      })
+      .setOrigin(0.5);
+    void this.startWhenReady();
+  }
+
+  private async startWhenReady() {
+    await ensureSvgTextures(this, playerPresentationTextures(loadGame()));
     this.scene.start("Harbor");
   }
 

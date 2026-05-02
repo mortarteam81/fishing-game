@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createInitialState, getSaveSlots, loadGameFromSlot, saveGameToSlot } from "../src/game/storage";
+import { createInitialState, getSaveSlots, loadGame, loadGameFromSlot, saveGame, saveGameToSlot } from "../src/game/storage";
 
 function installLocalStorage() {
   const store = new Map<string, string>();
@@ -14,9 +14,44 @@ function installLocalStorage() {
   });
 }
 
+function installDocumentCookie() {
+  const cookieJar = new Map<string, string>();
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      get cookie() {
+        return Array.from(cookieJar.entries())
+          .map(([key, value]) => `${key}=${value}`)
+          .join("; ");
+      },
+      set cookie(value: string) {
+        const [cookiePair, ...attributes] = value.split(";");
+        const [key, rawValue = ""] = cookiePair.split("=");
+        if (attributes.some((attribute) => attribute.trim().toLowerCase() === "max-age=0")) {
+          cookieJar.delete(key.trim());
+          return;
+        }
+        cookieJar.set(key.trim(), rawValue);
+      },
+    },
+  });
+}
+
+function setLegacyCookieBackup(key: string, value: unknown) {
+  const encoded = encodeURIComponent(encodePayload(JSON.stringify(value)));
+  document.cookie = `${key}-backup-0=${encoded}; Path=/; SameSite=Lax`;
+}
+
+function encodePayload(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+  return btoa(binary);
+}
+
 describe("save slots", () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, "localStorage");
+    Reflect.deleteProperty(globalThis, "document");
   });
 
   it("saves and loads a named captain profile", () => {
@@ -43,5 +78,72 @@ describe("save slots", () => {
       shells: 432,
     });
     expect(loadGameFromSlot(2)?.captain.presetId).toBe("coral-ranger");
+  });
+
+  it("does not let an older slot overwrite higher current progress", () => {
+    installLocalStorage();
+    const current = {
+      ...createInitialState(),
+      level: 30,
+      xp: 12,
+      shells: 2200,
+      collection: { "sunny-minnow": 20 },
+    };
+    const oldSlot = {
+      ...createInitialState(),
+      level: 7,
+      shells: 600,
+      collection: { "sunny-minnow": 4 },
+    };
+
+    saveGame(current);
+    saveGameToSlot(1, oldSlot);
+
+    const loaded = loadGameFromSlot(1);
+    expect(loaded?.level).toBe(30);
+    expect(loaded?.shells).toBe(2200);
+  });
+
+  it("migrates a higher legacy cookie backup before clearing it", () => {
+    installLocalStorage();
+    installDocumentCookie();
+
+    const current = {
+      ...createInitialState(),
+      level: 7,
+      shells: 600,
+      collection: { "sunny-minnow": 4 },
+    };
+    const legacy = {
+      ...createInitialState(),
+      saveVersion: 3,
+      level: 30,
+      shells: 2200,
+      collection: { "sunny-minnow": 30 },
+    };
+
+    saveGame(current);
+    setLegacyCookieBackup("banjjakbada-save-v1", legacy);
+
+    const loaded = loadGame();
+
+    expect(loaded.level).toBe(30);
+    expect(loaded.shells).toBe(2200);
+    expect(JSON.parse(localStorage.getItem("banjjakbada-save-v1") ?? "{}").level).toBe(30);
+    expect(document.cookie).not.toContain("banjjakbada-save-v1-backup-0");
+  });
+
+  it("unlocks level-gated late areas when an older level 51 save is normalized", () => {
+    installLocalStorage();
+    saveGame({
+      ...createInitialState(),
+      level: 51,
+      unlockedAreaIds: ["sunny-beach"],
+    });
+
+    const loaded = loadGame();
+
+    expect(loaded.unlockedAreaIds).toContain("starlit-offshore");
+    expect(loaded.unlockedAreaIds).not.toContain("glass-trench");
   });
 });
