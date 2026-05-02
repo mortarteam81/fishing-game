@@ -68,6 +68,10 @@ describe("content data", () => {
         if (step.kind === "unlockArea") {
           expect(areaIds.has(step.areaId)).toBe(true);
         }
+        if (step.kind === "researchRank") {
+          expect(fishIds.has(step.fishId)).toBe(true);
+          expect(step.rank).toBeGreaterThan(0);
+        }
       }
     }
 

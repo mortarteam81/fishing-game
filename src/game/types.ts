@@ -91,6 +91,20 @@ export type StoryEffect = {
   unlockAreaIds?: string[];
 };
 
+export type CatchQuality = "miss" | "nice" | "great" | "sparkle";
+
+export type CatchMutationId = "gleaming" | "tidekissed" | "aurora";
+
+export type DexResearchRecord = {
+  catches: number;
+  points: number;
+  bestQuality?: CatchQuality;
+  lastAreaId?: string;
+  completedAt?: string;
+};
+
+export type VariantCollection = Partial<Record<CatchMutationId, number>>;
+
 export type FishDefinition = {
   id: string;
   name: string;
@@ -163,6 +177,19 @@ export type QuestStep =
   | {
       kind: "unlockArea";
       areaId: string;
+    }
+  | {
+      kind: "researchRank";
+      fishId: string;
+      rank: number;
+    }
+  | {
+      kind: "completeResearch";
+      count: number;
+    }
+  | {
+      kind: "collectVariants";
+      count: number;
     };
 
 export type QuestDefinition = {
@@ -197,11 +224,13 @@ export type QuestProgress = {
 };
 
 export type PlayerState = {
-  saveVersion: 3;
+  saveVersion: 4;
   shells: number;
   level: number;
   xp: number;
   collection: Record<string, number>;
+  researchProgress: Record<string, DexResearchRecord>;
+  variantCollection: Record<string, VariantCollection>;
   captain: CaptainStyle;
   equippedRodId: string;
   equippedBaitId?: string;
@@ -223,10 +252,8 @@ export type FishingAttempt = {
   targetWidth: number;
 };
 
-export type CatchQuality = "miss" | "nice" | "great" | "sparkle";
-
 export type CatchMutation = {
-  id: "gleaming" | "tidekissed" | "aurora";
+  id: CatchMutationId;
   label: string;
   valueMultiplier: number;
   xpMultiplier: number;
@@ -234,11 +261,19 @@ export type CatchMutation = {
   tint: number;
 };
 
+export type CatchResearchResult = {
+  points: number;
+  rankBefore: number;
+  rankAfter: number;
+  rankLabel: string;
+};
+
 export type CatchResult = {
   success: boolean;
   quality: CatchQuality;
   fish?: FishDefinition;
   mutation?: CatchMutation;
+  research?: CatchResearchResult;
   shells: number;
   xp: number;
   message: string;

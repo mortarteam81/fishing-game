@@ -1,5 +1,13 @@
 import { areas, fish, getFish, getItem, getStoryChoice, items, quests, storyChoices } from "./content";
+import {
+  countCollectedVariants,
+  getResearchRank,
+  previewResearchCatch,
+  seedResearchRecord,
+} from "./research";
 import type {
+  CatchMutationId,
+  CatchQuality,
   FishDefinition,
   PlayerState,
   QuestDefinition,
@@ -9,6 +17,12 @@ import type {
   StoryEffect,
   StoryRewards,
 } from "./types";
+
+type RecordCatchDetails = {
+  areaId?: string;
+  mutationId?: CatchMutationId;
+  quality?: CatchQuality;
+};
 
 export const xpForLevel = (level: number) => 45 + (level - 1) * 35;
 
@@ -42,16 +56,60 @@ export function recordCatch(
   fishId: string,
   shells: number,
   xp: number,
+  details: RecordCatchDetails = {},
 ): PlayerState {
   const collection = {
     ...state.collection,
     [fishId]: (state.collection[fishId] ?? 0) + 1,
   };
+
+  const fishDefinition = getFish(fishId);
+  const currentResearch = state.researchProgress[fishId] ?? seedResearchRecord(state.collection[fishId] ?? 0);
+  const researchPreview =
+    fishDefinition && details.quality
+      ? previewResearchCatch(state, fishDefinition, details.quality, details.mutationId)
+      : undefined;
+  const nextResearch =
+    fishDefinition && researchPreview
+      ? {
+          ...currentResearch,
+          catches: currentResearch.catches + 1,
+          points: currentResearch.points + researchPreview.points,
+          bestQuality: bestCatchQuality(currentResearch.bestQuality, details.quality),
+          lastAreaId: details.areaId ?? currentResearch.lastAreaId,
+          completedAt:
+            researchPreview.rankAfter >= 4 && researchPreview.rankBefore < 4
+              ? new Date().toISOString()
+              : currentResearch.completedAt,
+        }
+      : {
+          ...currentResearch,
+          catches: currentResearch.catches + 1,
+          points: currentResearch.points + 2,
+          lastAreaId: details.areaId ?? currentResearch.lastAreaId,
+        };
+
+  const variantCollection =
+    details.mutationId
+      ? {
+          ...state.variantCollection,
+          [fishId]: {
+            ...(state.variantCollection[fishId] ?? {}),
+            [details.mutationId]: (state.variantCollection[fishId]?.[details.mutationId] ?? 0) + 1,
+          },
+        }
+      : state.variantCollection;
+
   return addXp(
     {
       ...state,
       shells: state.shells + shells,
       collection,
+      researchProgress: {
+        ...state.researchProgress,
+        [fishId]: nextResearch,
+      },
+      variantCollection,
     },
     xp,
   );
@@ -197,6 +255,15 @@ export function stepProgress(state: PlayerState, step: QuestStep): number {
       return state.ownedItemIds.includes(step.itemId) ? 1 : 0;
     case "unlockArea":
       return state.unlockedAreaIds.includes(step.areaId) ? 1 : 0;
+    case "researchRank":
+      return Math.min(getResearchRank(state.researchProgress[step.fishId]?.points ?? 0), step.rank);
+    case "completeResearch":
+      return Math.min(
+        Object.values(state.researchProgress).filter((record) => getResearchRank(record.points) >= 4).length,
+        step.count,
+      );
+    case "collectVariants":
+      return Math.min(countCollectedVariants(state.variantCollection), step.count);
   }
 }
 
@@ -211,6 +278,11 @@ export function stepTarget(step: QuestStep): number {
     case "ownItem":
     case "unlockArea":
       return 1;
+    case "researchRank":
+      return step.rank;
+    case "completeResearch":
+    case "collectVariants":
+      return step.count;
   }
 }
 
@@ -228,6 +300,12 @@ export function stepLabel(step: QuestStep): string {
       return `${getItem(step.itemId)?.name ?? "아이템"} 갖기`;
     case "unlockArea":
       return `${areas.find((area) => area.id === step.areaId)?.name ?? "새 낚시터"} 열기`;
+    case "researchRank":
+      return `${getFish(step.fishId)?.name ?? "바다 친구"} 연구 ${step.rank}단계`;
+    case "completeResearch":
+      return `연구 완료 ${step.count}종 달성`;
+    case "collectVariants":
+      return `변이 카드 ${step.count}장 기록`;
   }
 }
 
@@ -381,6 +459,23 @@ function applyStoryEffect(state: PlayerState, effect?: StoryEffect): PlayerState
     },
     unlockedAreaIds: Array.from(new Set([...state.unlockedAreaIds, ...(effect.unlockAreaIds ?? [])])),
   };
+}
+
+function bestCatchQuality(current: CatchQuality | undefined, next: CatchQuality | undefined): CatchQuality | undefined {
+  if (!next) {
+    return current;
+  }
+  if (!current) {
+    return next;
+  }
+
+  const rank: Record<CatchQuality, number> = {
+    miss: 0,
+    nice: 1,
+    great: 2,
+    sparkle: 3,
+  };
+  return rank[next] > rank[current] ? next : current;
 }
 
 export { fish };

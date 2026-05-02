@@ -22,6 +22,8 @@ describe("fishing loop", () => {
     expect(result.quality).toBe("sparkle");
     expect(result.shells).toBeGreaterThan(0);
     expect(result.xp).toBeGreaterThan(0);
+    expect(result.research?.points).toBeGreaterThan(0);
+    expect(result.research?.rankAfter).toBeGreaterThanOrEqual(result.research?.rankBefore ?? 0);
   });
 
   it("gives consolation reward when timing misses", () => {

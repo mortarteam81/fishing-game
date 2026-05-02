@@ -10,6 +10,7 @@ import {
   getVisibleQuests,
   recordCatch,
   refreshQuestCompletion,
+  stepProgress,
 } from "../src/game/progression";
 import { createInitialState } from "../src/game/storage";
 
@@ -19,6 +20,32 @@ describe("progression", () => {
 
     expect(state.collection["sunny-minnow"]).toBe(1);
     expect(state.shells).toBe(45);
+    expect(state.researchProgress["sunny-minnow"].catches).toBe(1);
+    expect(state.researchProgress["sunny-minnow"].points).toBeGreaterThan(0);
+  });
+
+  it("records catch mutations without changing the numeric collection model", () => {
+    const state = recordCatch(createInitialState(), "sunny-minnow", 10, 10, {
+      areaId: "sunny-beach",
+      mutationId: "gleaming",
+      quality: "sparkle",
+    });
+
+    expect(state.collection["sunny-minnow"]).toBe(1);
+    expect(typeof state.collection["sunny-minnow"]).toBe("number");
+    expect(state.variantCollection["sunny-minnow"].gleaming).toBe(1);
+    expect(state.researchProgress["sunny-minnow"].bestQuality).toBe("sparkle");
+    expect(state.researchProgress["sunny-minnow"].lastAreaId).toBe("sunny-beach");
+  });
+
+  it("keeps variant-only records out of basic collection quest counts", () => {
+    const state = {
+      ...createInitialState(),
+      variantCollection: { "sunny-minnow": { gleaming: 1 } },
+    };
+
+    expect(stepProgress(state, { kind: "collectUnique", count: 1 })).toBe(0);
+    expect(stepProgress(state, { kind: "collectVariants", count: 1 })).toBe(1);
   });
 
   it("unlocks the first quest reward after any catch", () => {

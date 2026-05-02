@@ -1,5 +1,6 @@
 import { areas, quests } from "./content";
-import type { CaptainStyle, PlayerState } from "./types";
+import { seedResearchRecord } from "./research";
+import type { CaptainStyle, DexResearchRecord, PlayerState, VariantCollection } from "./types";
 
 const STORAGE_KEY = "banjjakbada-save-v1";
 const SAVE_SLOT_PREFIX = "banjjakbada-save-slot-";
@@ -32,11 +33,13 @@ export const defaultCaptain: CaptainStyle = {
 };
 
 export const createInitialState = (): PlayerState => ({
-  saveVersion: 3,
+  saveVersion: 4,
   shells: 35,
   level: 1,
   xp: 0,
   collection: {},
+  researchProgress: {},
+  variantCollection: {},
   captain: defaultCaptain,
   equippedRodId: "twig-rod",
   equippedBoatId: "harbor-skiff",
@@ -70,7 +73,7 @@ export function saveGame(state: PlayerState): void {
     return;
   }
 
-  const stored = { ...state, saveVersion: 3 };
+  const stored = { ...state, saveVersion: 4 };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   writeServerBackup(STORAGE_KEY, stored);
 }
@@ -183,14 +186,17 @@ export async function hydrateGameBackup(): Promise<void> {
 function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   const initial = createInitialState();
   const level = parsed.level ?? initial.level;
+  const collection = { ...initial.collection, ...(parsed.collection ?? {}) };
   const levelUnlockedAreaIds = areas
     .filter((area) => area.requiredLevel <= level)
     .map((area) => area.id);
   return {
     ...initial,
     ...parsed,
-    saveVersion: 3,
-    collection: { ...initial.collection, ...(parsed.collection ?? {}) },
+    saveVersion: 4,
+    collection,
+    researchProgress: normalizeResearchProgress(parsed.researchProgress, collection),
+    variantCollection: normalizeVariantCollection(parsed.variantCollection),
     captain: {
       ...initial.captain,
       ...(parsed.captain ?? {}),
@@ -238,7 +244,7 @@ function parseStoredState(raw: string | null): StoredPlayerState | undefined {
 
   try {
     const parsed = JSON.parse(raw) as StoredPlayerState;
-    if (parsed.saveVersion !== 1 && parsed.saveVersion !== 2 && parsed.saveVersion !== 3) {
+    if (parsed.saveVersion !== 1 && parsed.saveVersion !== 2 && parsed.saveVersion !== 3 && parsed.saveVersion !== 4) {
       return undefined;
     }
     return parsed;
@@ -271,13 +277,77 @@ function progressScore(value: StoredPlayerState | undefined): number {
   }
 
   const collectionCount = Object.values(value.collection ?? {}).reduce((sum, count) => sum + count, 0);
+  const researchPoints = Object.values(value.researchProgress ?? {}).reduce(
+    (sum, record) => sum + Math.max(0, record?.points ?? 0),
+    0,
+  );
+  const variantCount = Object.values(value.variantCollection ?? {}).reduce(
+    (sum, variants) =>
+      sum + Object.values(variants ?? {}).reduce((variantSum, count) => variantSum + Math.max(0, count ?? 0), 0),
+    0,
+  );
   return (
     (value.level ?? 1) * 100000 +
     (value.xp ?? 0) * 100 +
     collectionCount * 50 +
+    researchPoints * 12 +
+    variantCount * 80 +
     (value.ownedItemIds?.length ?? 0) * 20 +
     (value.unlockedAreaIds?.length ?? 0) * 20 +
     (value.shells ?? 0)
+  );
+}
+
+function normalizeResearchProgress(
+  stored: Record<string, DexResearchRecord> | undefined,
+  collection: Record<string, number>,
+): Record<string, DexResearchRecord> {
+  const normalized: Record<string, DexResearchRecord> = {};
+
+  for (const [fishId, record] of Object.entries(stored ?? {})) {
+    normalized[fishId] = sanitizeResearchRecord(record);
+  }
+
+  for (const [fishId, count] of Object.entries(collection)) {
+    if (count <= 0) {
+      continue;
+    }
+    const seeded = seedResearchRecord(count);
+    const current = normalized[fishId];
+    normalized[fishId] = current
+      ? {
+          ...current,
+          catches: Math.max(current.catches, seeded.catches),
+          points: Math.max(current.points, seeded.points),
+        }
+      : seeded;
+  }
+
+  return normalized;
+}
+
+function sanitizeResearchRecord(record: DexResearchRecord): DexResearchRecord {
+  return {
+    ...record,
+    catches: Math.max(0, Math.floor(record.catches ?? 0)),
+    points: Math.max(0, Math.floor(record.points ?? 0)),
+  };
+}
+
+function normalizeVariantCollection(
+  stored: Record<string, VariantCollection> | undefined,
+): Record<string, VariantCollection> {
+  return Object.fromEntries(
+    Object.entries(stored ?? {}).map(([fishId, variants]) => {
+      const normalizedVariants: Record<string, number> = {};
+      for (const [mutationId, count] of Object.entries(variants ?? {})) {
+        const normalizedCount = Math.max(0, Math.floor(count ?? 0));
+        if (normalizedCount > 0) {
+          normalizedVariants[mutationId] = normalizedCount;
+        }
+      }
+      return [fishId, normalizedVariants];
+    }),
   );
 }
 

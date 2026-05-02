@@ -146,4 +146,48 @@ describe("save slots", () => {
     expect(loaded.unlockedAreaIds).toContain("starlit-offshore");
     expect(loaded.unlockedAreaIds).not.toContain("glass-trench");
   });
+
+  it("hydrates research fields from an older numeric collection save", () => {
+    installLocalStorage();
+    localStorage.setItem(
+      "banjjakbada-save-v1",
+      JSON.stringify({
+        ...createInitialState(),
+        saveVersion: 3,
+        collection: { "sunny-minnow": 4 },
+      }),
+    );
+
+    const loaded = loadGame();
+
+    expect(loaded.saveVersion).toBe(4);
+    expect(loaded.collection["sunny-minnow"]).toBe(4);
+    expect(typeof loaded.collection["sunny-minnow"]).toBe("number");
+    expect(loaded.researchProgress["sunny-minnow"].catches).toBe(4);
+    expect(loaded.researchProgress["sunny-minnow"].points).toBeGreaterThan(0);
+    expect(loaded.variantCollection).toEqual({});
+  });
+
+  it("round-trips variants through main save and save slots", () => {
+    installLocalStorage();
+    const state = {
+      ...createInitialState(),
+      collection: { "sunny-minnow": 3 },
+      researchProgress: { "sunny-minnow": { catches: 3, points: 12, bestQuality: "great" as const } },
+      variantCollection: { "sunny-minnow": { gleaming: 1, aurora: 1 } },
+    };
+
+    saveGame(state);
+    const loaded = loadGame();
+
+    expect(loaded.collection["sunny-minnow"]).toBe(3);
+    expect(typeof loaded.collection["sunny-minnow"]).toBe("number");
+    expect(loaded.variantCollection["sunny-minnow"].gleaming).toBe(1);
+    expect(loaded.variantCollection["sunny-minnow"].aurora).toBe(1);
+
+    saveGameToSlot(1, state);
+    const slots = getSaveSlots();
+    expect(slots[0].collectionCount).toBe(1);
+    expect(loadGameFromSlot(1)?.variantCollection["sunny-minnow"].aurora).toBe(1);
+  });
 });

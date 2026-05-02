@@ -1,5 +1,6 @@
 import { areas, fish } from "./content";
 import { getFishAffinityBoost, getLureSpeed, getMutationChance, getRareBoost, getRodEase } from "./progression";
+import { previewResearchCatch } from "./research";
 import type {
   CatchMutation,
   CatchQuality,
@@ -85,12 +86,14 @@ export function resolveTiming(
   const mutation = rollMutation(quality, attempt.fish, state, random);
   const mutationValue = mutation?.valueMultiplier ?? 1;
   const mutationXp = mutation?.xpMultiplier ?? 1;
+  const research = previewResearchCatch(state, attempt.fish, quality, mutation?.id);
 
   return {
     success: true,
     quality,
     fish: attempt.fish,
     mutation,
+    research,
     shells: Math.round(attempt.fish.baseShells * multiplier * rarity * mutationValue),
     xp: Math.round(attempt.fish.xp * multiplier * mutationXp),
     message:

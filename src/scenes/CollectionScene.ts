@@ -2,9 +2,17 @@ import Phaser from "phaser";
 import { areas, fish } from "../game/content";
 import { ensureSvgTextures, fishTexture } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
+import {
+  getNextResearchTarget,
+  getResearchCompletionRatio,
+  getResearchMeta,
+  getResearchRank,
+  mutationMeta,
+} from "../game/research";
 import { loadGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addTextButton } from "../game/ui";
 import type {
+  CatchMutationId,
   FishDefinition,
   PlayerState,
   Rarity,
@@ -165,8 +173,9 @@ export class CollectionScene extends Phaser.Scene {
     const maxPage = Math.max(0, Math.ceil(fish.length / PAGE_SIZE) - 1);
     const discovered = fish.filter((entry) => (this.state.collection[entry.id] ?? 0) > 0).length;
     const completion = Math.round((discovered / fish.length) * 100);
+    const researchDone = fish.filter((entry) => getResearchRank(this.state.researchProgress[entry.id]?.points ?? 0) >= 4).length;
 
-    this.addProgressSummary(discovered, completion);
+    this.addProgressSummary(discovered, completion, researchDone);
 
     const loadingText = this.add
       .text(480, 286, "도감 그림을 준비하는 중...", {
@@ -209,7 +218,7 @@ export class CollectionScene extends Phaser.Scene {
     }
   }
 
-  private addProgressSummary(discovered: number, completion: number) {
+  private addProgressSummary(discovered: number, completion: number, researchDone: number) {
     const x = 480;
     const y = 70;
     const width = 482;
@@ -234,9 +243,9 @@ export class CollectionScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
     this.add
-      .text(x - 216, y + 12, `${discovered}/${fish.length}장`, {
+      .text(x - 216, y + 12, `${discovered}/${fish.length}장 · 연구 완료 ${researchDone}종`, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "19px",
+        fontSize: "18px",
         fontStyle: "900",
         color: TEXT.primary,
       })
@@ -432,6 +441,10 @@ export class CollectionScene extends Phaser.Scene {
     discovered: boolean,
   ) {
     const name = discovered ? entry.name : "미확인 카드";
+    const research = this.state.researchProgress[entry.id];
+    const researchPoints = discovered ? research?.points ?? 1 : 0;
+    const researchMeta = getResearchMeta(researchPoints);
+    const variants = this.state.variantCollection[entry.id] ?? {};
     const nameSize = name.length > 10 ? "13px" : name.length > 7 ? "14px" : "16px";
     container.add(
       this.add
@@ -461,14 +474,48 @@ export class CollectionScene extends Phaser.Scene {
     );
 
     if (discovered) {
-      this.addChip(container, -45, 66, `${count}회`, PALETTE.white, TEXT.primary, 58);
-      this.addChip(container, 24, 66, sizeLabel[entry.size], meta.glow, TEXT.primary, 58);
-      this.addChip(container, 75, 66, behaviorLabel[entry.behaviorTags[0]], meta.surface, TEXT.secondary, 54);
+      this.addChip(container, -62, 66, `${count}회`, PALETTE.white, TEXT.primary, 52);
+      this.addChip(container, 2, 66, researchMeta.short, meta.glow, TEXT.primary, 70);
+      this.addMutationPips(container, 72, 66, variants);
+      this.addResearchStrip(container, researchPoints, meta.glow);
       return;
     }
 
     this.addChip(container, -38, 66, "힌트", PALETTE.white, TEXT.disabled, 52);
     this.addChip(container, 38, 66, "탐사 필요", 0xc6d5dd, TEXT.disabled, 76);
+  }
+
+  private addMutationPips(
+    container: Phaser.GameObjects.Container,
+    x: number,
+    y: number,
+    variants: Record<string, number | undefined>,
+  ) {
+    const graphics = this.add.graphics();
+    graphics.fillStyle(PALETTE.white, 0.62);
+    graphics.fillRoundedRect(x - 28, y - 10, 56, 20, 10);
+    graphics.lineStyle(1.5, PALETTE.ink, 0.18);
+    graphics.strokeRoundedRect(x - 28, y - 10, 56, 20, 10);
+
+    Object.entries(mutationMeta).forEach(([mutationId, meta], index) => {
+      const collected = (variants[mutationId] ?? 0) > 0;
+      graphics.fillStyle(collected ? meta.tint : 0xc6d5dd, collected ? 1 : 0.78);
+      graphics.fillCircle(x - 14 + index * 14, y, 4.2);
+      graphics.lineStyle(1.2, PALETTE.ink, collected ? 0.32 : 0.16);
+      graphics.strokeCircle(x - 14 + index * 14, y, 4.2);
+    });
+
+    container.add(graphics);
+  }
+
+  private addResearchStrip(container: Phaser.GameObjects.Container, points: number, fill: number) {
+    const width = CARD_WIDTH - 38;
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0x18364a, 0.1);
+    graphics.fillRoundedRect(-width / 2, 75, width, 5, 3);
+    graphics.fillStyle(fill, 0.95);
+    graphics.fillRoundedRect(-width / 2, 75, Math.max(8, width * getResearchCompletionRatio(points)), 5, 3);
+    container.add(graphics);
   }
 
   private addChip(
@@ -518,6 +565,11 @@ export class CollectionScene extends Phaser.Scene {
 
     const discovered = count > 0;
     const meta = rarityMeta[entry.rarity];
+    const research = this.state.researchProgress[entry.id];
+    const researchPoints = discovered ? research?.points ?? 1 : 0;
+    const researchMeta = getResearchMeta(researchPoints);
+    const nextResearchTarget = getNextResearchTarget(researchPoints);
+    const variantLine = this.variantDetailLine(entry.id);
     const layer = this.add.container(0, 0).setDepth(80);
     this.detailLayer = layer;
 
@@ -636,17 +688,27 @@ export class CollectionScene extends Phaser.Scene {
     );
 
     const behaviorTags = entry.behaviorTags.map((behavior) => behaviorLabel[behavior]).join(" · ");
+    const researchLine = nextResearchTarget
+      ? `연구 ${researchMeta.label} ${researchPoints}/${nextResearchTarget}`
+      : `연구 ${researchMeta.label} 완료`;
     layer.add(
       this.add
-        .text(470, 352, discovered ? `서식 ${this.areaNamesFor(entry)}\n특성 ${behaviorTags}\n수집 ${count}회` : `서식 ${this.areaNamesFor(entry)}`, {
+        .text(
+          470,
+          364,
+          discovered
+            ? `서식 ${this.areaNamesFor(entry)}\n특성 ${behaviorTags}\n수집 ${count}회 · ${researchLine}\n${variantLine}`
+            : `서식 ${this.areaNamesFor(entry)}`,
+          {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-          fontSize: "14px",
+          fontSize: "13px",
           fontStyle: "800",
           color: TEXT.secondary,
           fixedWidth: 260,
-          lineSpacing: 5,
+          lineSpacing: 4,
           wordWrap: { width: 260 },
-        })
+        },
+        )
         .setOrigin(0, 0.5),
     );
 
@@ -699,6 +761,13 @@ export class CollectionScene extends Phaser.Scene {
     return entry.areaIds
       .map((areaId) => areaNameById.get(areaId) ?? areaId)
       .slice(0, 3)
+      .join(" · ");
+  }
+
+  private variantDetailLine(fishId: string): string {
+    const variants = this.state.variantCollection[fishId] ?? {};
+    return Object.entries(mutationMeta)
+      .map(([mutationId, meta]) => `${meta.short} ${(variants[mutationId as CatchMutationId] ?? 0)}`)
       .join(" · ");
   }
 }

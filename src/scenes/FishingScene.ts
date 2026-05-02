@@ -299,7 +299,11 @@ export class FishingScene extends Phaser.Scene {
     const inputScore = forceMiss ? (this.dynamicTargetCenter > 0.5 ? 0 : 1) : this.score;
     const result = resolveTiming(attempt, inputScore, this.state);
     const next = result.success && result.fish
-      ? recordCatch(this.state, result.fish.id, result.shells, result.xp)
+      ? recordCatch(this.state, result.fish.id, result.shells, result.xp, {
+          areaId: this.areaId,
+          mutationId: result.mutation?.id,
+          quality: result.quality,
+        })
       : recordConsolation(this.state, result.shells, result.xp);
     const refreshed = refreshQuestCompletion(next);
     saveGame(refreshed);

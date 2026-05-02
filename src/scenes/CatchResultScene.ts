@@ -98,15 +98,32 @@ export class CatchResultScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
 
+    const researchLine = this.result.research
+      ? `연구 +${this.result.research.points} · ${
+          this.result.research.rankAfter > this.result.research.rankBefore
+            ? `${this.result.research.rankLabel} 단계 달성!`
+            : `${this.result.research.rankLabel} 단계 진행 중`
+        }`
+      : undefined;
+
     this.add
-      .text(480, 376, `${this.result.message}\n조개 +${this.result.shells}  ·  경험치 +${this.result.xp}`, {
+      .text(
+        480,
+        376,
+        [
+          this.result.message,
+          `조개 +${this.result.shells}  ·  경험치 +${this.result.xp}`,
+          researchLine,
+        ].filter(Boolean).join("\n"),
+        {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "23px",
+        fontSize: researchLine ? "20px" : "23px",
         fontStyle: "800",
         color: TEXT.primary,
         align: "center",
-        lineSpacing: 8,
-      })
+        lineSpacing: researchLine ? 6 : 8,
+      },
+      )
       .setOrigin(0.5);
 
     addTextButton(this, 380, 470, "한 번 더", () => this.scene.start("Fishing", { areaId: this.areaId }), {
