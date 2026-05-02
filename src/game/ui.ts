@@ -93,7 +93,7 @@ export function addPanel(
   fill = 0xffffff,
 ): Phaser.GameObjects.Rectangle {
   return scene.add
-    .rectangle(x, y, width, height, fill, 0.90)
+    .rectangle(x, y, width, height, fill, 0.98)
     .setStrokeStyle(3, PALETTE.ink, 0.70)
     .setOrigin(0.5);
 }
@@ -170,7 +170,7 @@ export function addOceanBackground(scene: Phaser.Scene, variant: OceanBackground
   const right = fixedViewportRight(scene);
   const width = fixedViewportWidth(scene);
   const centerX = BASE_GAME_WIDTH / 2;
-  const g = scene.add.graphics();
+  const g = scene.add.graphics().setDepth(-30);
 
   // === 空 SKY — clean gradient ===
   g.fillGradientStyle(pal.top, pal.top, pal.mid, pal.mid, 1);
@@ -213,7 +213,7 @@ function addAnimatedWaves(scene: Phaser.Scene, variant: OceanBackgroundVariant, 
   ];
 
   const offsets = rows.map(r => r.phase);
-  const waveLayer = scene.add.graphics().setDepth(1);
+  const waveLayer = scene.add.graphics().setDepth(-20);
 
   const redraw = (_: number, delta: number) => {
     waveLayer.clear();
@@ -271,7 +271,7 @@ function addBubbles(scene: Phaser.Scene, centerX: number, width: number): void {
     lifespan: { min: 4500,  max: 9000 },
     frequency: 650,
     quantity:  1,
-  }).setDepth(2);
+  }).setDepth(-15);
 }
 
 function drawUkiyoeWaves(g: Phaser.GameObjects.Graphics, variant: OceanBackgroundVariant): void {

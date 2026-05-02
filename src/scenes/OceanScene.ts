@@ -6,11 +6,21 @@ import { fixedContentOffset, fixedScreenCenterX, sceneGameWidth } from "../game/
 import { companionTextures, ensureSvgTextures, fishTexturesForIds, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { playSoftTone } from "../game/audio";
-import { canDiscoverArea, discoverArea, getBoatSpeed, isAreaDiscovered } from "../game/progression";
+import {
+  canAttemptVoyageEventForArea,
+  canDiscoverArea,
+  discoverArea,
+  getBoatSpeed,
+  getEquippedGearBuild,
+  isAreaDiscovered,
+  recordVoyageEventResult,
+  requiredVoyageEventForArea,
+} from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
 import { addMuteButton, addTextButton } from "../game/ui";
+import { getVoyageEvent, voyageEventForArea } from "../game/voyageEvents";
 import { getAreaWeather } from "../game/weather";
-import type { AreaDefinition, PlayerState } from "../game/types";
+import type { AreaDefinition, PlayerState, VoyageEventId } from "../game/types";
 
 type Hotspot = {
   area: AreaDefinition;
@@ -33,8 +43,8 @@ type OceanLifeSpot = {
   flipX?: boolean;
 };
 
-const WORLD_WIDTH = 2680;
-const WORLD_HEIGHT = 1780;
+const WORLD_WIDTH = 3180;
+const WORLD_HEIGHT = 3180;
 
 const hotspotLayout = [
   [430, 1280],
@@ -122,6 +132,16 @@ const oceanLifeConfig: readonly OceanLifeSpot[] = [
   { fishId: "tempest-pass-crown-clam", x: 2200, y: 1530, scale: 0.58, depth: 7, alpha: 0.7, driftX: -18, driftY: -10, duration: 2900, flipX: true },
   { fishId: "temporal-garden-skywhale", x: 2420, y: 1320, scale: 0.9, depth: 8, alpha: 0.76, driftX: 48, driftY: -20, duration: 4000 },
   { fishId: "aurora-crown-mythic-nudibranch", x: 2505, y: 1545, scale: 0.7, depth: 8, alpha: 0.74, driftX: -28, driftY: -18, duration: 3300, flipX: true },
+  { fishId: "starwhale-lookout-ancient-starwhale-skywhale", x: 520, y: 2140, scale: 0.88, depth: 8, alpha: 0.78, driftX: 54, driftY: -22, duration: 4100 },
+  { fishId: "galaxy-buoy-field-prism-needlefish", x: 1040, y: 2280, scale: 0.6, depth: 7, alpha: 0.72, driftX: -36, driftY: -14, duration: 2600, flipX: true },
+  { fishId: "moonhalo-whale-bay-moonhalo-skywhale", x: 1580, y: 2220, scale: 0.9, depth: 8, alpha: 0.76, driftX: 48, driftY: -20, duration: 3900 },
+  { fishId: "meteor-coral-belt-comet-oracle-clam", x: 2140, y: 2300, scale: 0.62, depth: 7, alpha: 0.72, driftX: -20, driftY: -10, duration: 3100, flipX: true },
+  { fishId: "stars-breath-open-sea-ancient-starwhale-skywhale", x: 2700, y: 2140, scale: 0.92, depth: 8, alpha: 0.78, driftX: 58, driftY: -24, duration: 4200 },
+  { fishId: "crown-seafloor-gate-crown-lantern-eel", x: 560, y: 2760, scale: 0.62, depth: 8, alpha: 0.72, driftX: -30, driftY: -16, duration: 3100, flipX: true },
+  { fishId: "black-pearl-abyss-black-pearl-crown-clam", x: 1120, y: 2880, scale: 0.6, depth: 8, alpha: 0.7, driftX: 18, driftY: -10, duration: 2900 },
+  { fishId: "silent-throne-reef-throne-velvet-turtle", x: 1680, y: 2760, scale: 0.72, depth: 8, alpha: 0.72, driftX: -28, driftY: -12, duration: 3600, flipX: true },
+  { fishId: "ancient-lantern-stairs-shadow-mosaic-crab", x: 2240, y: 2920, scale: 0.62, depth: 8, alpha: 0.72, driftX: 24, driftY: -12, duration: 3200 },
+  { fishId: "deep-crown-castle-abyss-mythic-nudibranch", x: 2780, y: 2820, scale: 0.7, depth: 8, alpha: 0.76, driftX: -30, driftY: -18, duration: 3400, flipX: true },
 ];
 
 export class OceanScene extends Phaser.Scene {
@@ -140,6 +160,13 @@ export class OceanScene extends Phaser.Scene {
   private nearby?: Hotspot;
   private shimmerLayers: Phaser.GameObjects.Graphics[] = [];
   private wakeCooldown = 0;
+  private voyageEventGroup?: Phaser.GameObjects.Container;
+  private voyageEventNeedle?: Phaser.GameObjects.Rectangle;
+  private voyageEventScore = 0;
+  private voyageEventDirection = 1;
+  private voyageEventArea?: AreaDefinition;
+  private voyageEventId?: VoyageEventId;
+  private voyageEventActive = false;
 
   constructor() {
     super("Ocean");
@@ -193,6 +220,10 @@ export class OceanScene extends Phaser.Scene {
     }
 
     this.animateSea(delta);
+    if (this.voyageEventActive) {
+      this.updateVoyageEvent(delta);
+      return;
+    }
     this.moveBoat(delta);
     this.updateNearbyPrompt();
   }
@@ -247,7 +278,7 @@ export class OceanScene extends Phaser.Scene {
       const friend = this.add
         .image(spot.x, spot.y, friendDefinition.assetKey)
         .setScale(spot.scale)
-        .setDepth(spot.depth)
+        .setDepth(Math.min(4, spot.depth))
         .setAlpha(spot.alpha);
       friend.setFlipX(Boolean(spot.flipX));
       this.tweens.add({
@@ -283,7 +314,8 @@ export class OceanScene extends Phaser.Scene {
     for (const hotspot of this.mapHotspots()) {
       const unlocked = this.state.unlockedAreaIds.includes(hotspot.area.id);
       const discovered = isAreaDiscovered(this.state, hotspot.area);
-      const rumor = !discovered && canDiscoverArea(this.state, hotspot.area);
+      const risk = !discovered && canAttemptVoyageEventForArea(this.state, hotspot.area);
+      const rumor = !discovered && (canDiscoverArea(this.state, hotspot.area) || risk);
       const weather = getAreaWeather(hotspot.area, this.state);
       const object = this.add.image(hotspot.x, hotspot.y, hotspot.texture).setDepth(5).setAlpha(unlocked ? 1 : rumor ? 0.34 : 0.48);
       if (rumor) {
@@ -387,9 +419,10 @@ export class OceanScene extends Phaser.Scene {
       this.add
         .text(322, 38, "클릭/터치한 곳으로 항해 · 방향키/WASD도 가능", {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-          fontSize: "20px",
+          fontSize: "18px",
           fontStyle: "800",
           color: TEXT.secondary,
+          fixedWidth: 386,
         })
         .setOrigin(0, 0.5),
     );
@@ -409,9 +442,10 @@ export class OceanScene extends Phaser.Scene {
     this.weatherText = this.add
       .text(322, 60, "날씨 소문을 확인하는 중", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "15px",
+        fontSize: "13px",
         fontStyle: "800",
         color: TEXT.secondary,
+        fixedWidth: 380,
       })
       .setOrigin(0, 0.5);
     fixed.add(this.weatherText);
@@ -626,7 +660,7 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private updateNearbyPrompt() {
-    const available = this.mapHotspots().filter((hotspot) => this.state.unlockedAreaIds.includes(hotspot.area.id) || canDiscoverArea(this.state, hotspot.area));
+    const available = this.mapHotspots().filter((hotspot) => this.state.unlockedAreaIds.includes(hotspot.area.id) || canDiscoverArea(this.state, hotspot.area) || canAttemptVoyageEventForArea(this.state, hotspot.area));
     const closest = available.find((hotspot) => Phaser.Math.Distance.Between(this.boat.x, this.boat.y, hotspot.x, hotspot.y) < 170);
     if (closest?.area.id === this.nearby?.area.id) {
       return;
@@ -643,7 +677,8 @@ export class OceanScene extends Phaser.Scene {
     }
 
     const wasDiscovered = isAreaDiscovered(this.state, closest.area);
-    if (!wasDiscovered && canDiscoverArea(this.state, closest.area)) {
+    const canAttemptRisk = canAttemptVoyageEventForArea(this.state, closest.area);
+    if (!wasDiscovered && !canAttemptRisk && canDiscoverArea(this.state, closest.area)) {
       this.state = discoverArea(this.state, closest.area.id);
       saveGame(this.state);
     }
@@ -653,9 +688,11 @@ export class OceanScene extends Phaser.Scene {
     this.statusText?.setText(newlyDiscovered ? "숨은 항로 발견!" : `${closest.area.name} 발견!`);
     this.weatherText?.setText(`${closest.area.name} · ${weather.label} · ${weather.description}`);
     playSoftTone(this, this.state, 640, 0.06);
+    const eventId = requiredVoyageEventForArea(closest.area) ?? voyageEventForArea(closest.area).id;
+    const event = getVoyageEvent(eventId);
     const panel = this.add.rectangle(0, 0, 438, 88, PALETTE.paper, 0.9).setStrokeStyle(4, PALETTE.ink);
     const text = this.add
-      .text(-200, -18, newlyDiscovered ? closest.area.route?.revealText ?? `${closest.area.name} 발견!` : `${closest.area.name} 근처예요`, {
+      .text(-200, -18, canAttemptRisk ? `${event?.label ?? "위험 항로"} 발견!` : newlyDiscovered ? closest.area.route?.revealText ?? `${closest.area.name} 발견!` : `${closest.area.name} 근처예요`, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: newlyDiscovered ? "18px" : "23px",
         fontStyle: "900",
@@ -664,7 +701,7 @@ export class OceanScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
     const hint = this.add
-      .text(-200, 24, `${weather.label} · 반짝 포인트에서 낚시해볼까요?`, {
+      .text(-200, 24, canAttemptRisk ? `${event?.description ?? "위험한 항로를 통과해야 해요."}` : `${weather.label} · 반짝 포인트에서 낚시해볼까요?`, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "16px",
         fontStyle: "800",
@@ -672,7 +709,13 @@ export class OceanScene extends Phaser.Scene {
         wordWrap: { width: 284 },
       })
       .setOrigin(0, 0.5);
-    const button = addTextButton(this, 140, 0, "낚시", () => this.scene.start("Fishing", { areaId: closest.area.id }), {
+    const button = addTextButton(this, 140, 0, canAttemptRisk ? "위험 항로" : "낚시", () => {
+      if (canAttemptRisk) {
+        this.startVoyageEvent(closest.area, eventId);
+        return;
+      }
+      this.scene.start("Fishing", { areaId: closest.area.id });
+    }, {
       width: 104,
       height: 48,
       fontSize: 19,
@@ -683,11 +726,17 @@ export class OceanScene extends Phaser.Scene {
     this.prompt = this.add.container(fixedContentOffset(this) + 480, 112, [panel, text, hint, button]).setScrollFactor(0).setDepth(70);
     this.prompt.setSize(438, 88);
     this.prompt.setInteractive({ useHandCursor: true });
-    this.prompt.on("pointerdown", () => this.scene.start("Fishing", { areaId: closest.area.id }));
+    this.prompt.on("pointerdown", () => {
+      if (canAttemptRisk) {
+        this.startVoyageEvent(closest.area, eventId);
+        return;
+      }
+      this.scene.start("Fishing", { areaId: closest.area.id });
+    });
   }
 
   private mapHotspots(): Hotspot[] {
-    return hotspots.filter((hotspot) => isAreaDiscovered(this.state, hotspot.area) || canDiscoverArea(this.state, hotspot.area));
+    return hotspots.filter((hotspot) => isAreaDiscovered(this.state, hotspot.area) || canDiscoverArea(this.state, hotspot.area) || canAttemptVoyageEventForArea(this.state, hotspot.area));
   }
 
   private hotspotLabel(area: AreaDefinition, unlocked: boolean, rumor: boolean): string {
@@ -695,8 +744,96 @@ export class OceanScene extends Phaser.Scene {
       return area.name;
     }
     if (rumor) {
-      return "수상한 물결";
+      return canAttemptVoyageEventForArea(this.state, area) ? "위험 항로" : "수상한 물결";
     }
     return `Lv.${area.requiredLevel} 열림`;
+  }
+
+  private startVoyageEvent(area: AreaDefinition, eventId: VoyageEventId) {
+    if (this.voyageEventActive) {
+      return;
+    }
+
+    const event = getVoyageEvent(eventId) ?? voyageEventForArea(area);
+    this.voyageEventArea = area;
+    this.voyageEventId = event.id;
+    this.voyageEventScore = 0;
+    this.voyageEventDirection = 1;
+    this.voyageEventActive = true;
+    this.prompt?.destroy();
+    this.prompt = undefined;
+    this.target = undefined;
+
+    const panel = this.add.rectangle(0, 0, 560, 190, PALETTE.paper, 0.94).setStrokeStyle(4, PALETTE.ink, 0.86);
+    const title = this.add.text(-250, -70, event.label, {
+      fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "26px",
+      fontStyle: "900",
+      color: TEXT.primary,
+    }).setOrigin(0, 0.5);
+    const helper = this.add.text(-250, -34, event.description, {
+      fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "16px",
+      fontStyle: "800",
+      color: TEXT.secondary,
+      fixedWidth: 500,
+      wordWrap: { width: 500 },
+    }).setOrigin(0, 0.5);
+    const meterBg = this.add.rectangle(0, 36, 420, 42, 0xd9eef0, 1).setStrokeStyle(3, PALETTE.ink, 0.52);
+    const safeZone = this.add.rectangle(0, 36, 132 + this.voyageEventWindow() * 220, 36, event.tint, 0.82);
+    this.voyageEventNeedle = this.add.rectangle(-196, 36, 8, 62, PALETTE.coral, 1);
+    const button = addTextButton(this, 0, 86, "지금 통과", () => this.resolveVoyageEvent(false), {
+      width: 170,
+      height: 42,
+      fontSize: 18,
+      fill: PALETTE.butter,
+    });
+    this.voyageEventGroup = this.add.container(fixedContentOffset(this) + 480, 258, [panel, title, helper, meterBg, safeZone, this.voyageEventNeedle, button])
+      .setScrollFactor(0)
+      .setDepth(90);
+    this.time.delayedCall(7600, () => this.resolveVoyageEvent(true));
+  }
+
+  private updateVoyageEvent(delta: number) {
+    if (!this.voyageEventNeedle) {
+      return;
+    }
+    this.voyageEventScore += this.voyageEventDirection * delta * 0.00078;
+    if (this.voyageEventScore >= 1) {
+      this.voyageEventScore = 1;
+      this.voyageEventDirection = -1;
+    }
+    if (this.voyageEventScore <= 0) {
+      this.voyageEventScore = 0;
+      this.voyageEventDirection = 1;
+    }
+    this.voyageEventNeedle.x = -196 + this.voyageEventScore * 392;
+  }
+
+  private resolveVoyageEvent(forceFail: boolean) {
+    if (!this.voyageEventActive || !this.voyageEventId || !this.voyageEventArea) {
+      return;
+    }
+    const event = getVoyageEvent(this.voyageEventId);
+    const success = !forceFail && Math.abs(this.voyageEventScore - 0.5) <= this.voyageEventWindow();
+    this.voyageEventActive = false;
+    this.voyageEventGroup?.destroy(true);
+    this.voyageEventGroup = undefined;
+    const updated = recordVoyageEventResult(this.state, this.voyageEventId, success);
+    const discovered = success && canDiscoverArea(updated, this.voyageEventArea)
+      ? discoverArea(updated, this.voyageEventArea.id)
+      : updated;
+    saveGame(discovered);
+    playSoftTone(this, discovered, success ? 760 : 420, 0.1);
+    this.statusText?.setText(success ? event?.successText ?? "위험 항로 통과!" : event?.failText ?? "다시 도전할 수 있어요.");
+    this.scene.restart();
+  }
+
+  private voyageEventWindow() {
+    const event = this.voyageEventId ? getVoyageEvent(this.voyageEventId) : undefined;
+    const build = getEquippedGearBuild(this.state);
+    const roleBonus = event?.preferredRole && build.primaryRole === event.preferredRole ? 0.045 + build.synergyLevel * 0.012 : 0;
+    const companionBonus = Math.min(0.05, this.state.equippedCompanionIds.reduce((sum, id) => sum + (this.state.affinity[id] ?? 0), 0) / 6000);
+    return 0.14 + roleBonus + companionBonus;
   }
 }

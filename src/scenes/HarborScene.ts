@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { addPlayerBoat } from "../game/boat";
+import { chapterMeta, chapterOrder, chapterLabel } from "../game/chapters";
 import { getEquippedCompanionProfiles } from "../game/companions";
 import { addCompanionFollowers } from "../game/companionVisuals";
 import { areas } from "../game/content";
@@ -9,13 +10,14 @@ import {
   applyStoryChoice,
   getAvailableStoryChoices,
   getEquippedGearBuild,
+  getVisibleQuests,
   isAreaDiscovered,
   nextQuestHint,
   refreshQuestCompletion,
 } from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
-import type { PlayerState } from "../game/types";
+import type { ChapterId, PlayerState } from "../game/types";
 
 export class HarborScene extends Phaser.Scene {
   private state!: PlayerState;
@@ -52,7 +54,9 @@ export class HarborScene extends Phaser.Scene {
     this.addBoat();
     this.addHeroPanel();
     this.addCompanionPanel();
-    this.addStoryChoicePanel();
+    if (!this.addStoryChoicePanel()) {
+      this.addChapterPanel();
+    }
     this.addVoyagePanel();
     this.addNavigation();
   }
@@ -119,9 +123,9 @@ export class HarborScene extends Phaser.Scene {
       return;
     }
 
-    addPanel(this, 190, 382, 302, 82, PALETTE.paper);
+    addPanel(this, 190, 92, 302, 82, PALETTE.paper);
     this.add
-      .text(62, 357, "오늘의 동료", {
+      .text(62, 67, "오늘의 동료", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "16px",
         fontStyle: "900",
@@ -129,7 +133,7 @@ export class HarborScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
     this.add
-      .text(62, 381, `${lead.fish.name} · ${lead.mood}`, {
+      .text(62, 91, `${lead.fish.name} · ${lead.mood}`, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: lead.fish.name.length > 8 ? "17px" : "19px",
         fontStyle: "900",
@@ -138,7 +142,7 @@ export class HarborScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
     this.add
-      .text(62, 407, lead.effectLabel, {
+      .text(62, 117, lead.effectLabel, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "13px",
         fontStyle: "800",
@@ -163,8 +167,8 @@ export class HarborScene extends Phaser.Scene {
       0,
       ...knownAreas.map((area, index) => (this.state.unlockedAreaIds.includes(area.id) ? index : -1)),
     );
-    const startIndex = Phaser.Math.Clamp(farthestUnlocked - 1, 0, Math.max(0, knownAreas.length - 4));
-    const voyageAreas = knownAreas.slice(startIndex, startIndex + 4);
+    const startIndex = Phaser.Math.Clamp(farthestUnlocked - 1, 0, Math.max(0, knownAreas.length - 3));
+    const voyageAreas = knownAreas.slice(startIndex, startIndex + 3);
 
     voyageAreas.forEach((area, index) => {
       const unlocked = this.state.unlockedAreaIds.includes(area.id);
@@ -189,10 +193,10 @@ export class HarborScene extends Phaser.Scene {
     });
   }
 
-  private addStoryChoicePanel() {
+  private addStoryChoicePanel(): boolean {
     const choice = getAvailableStoryChoices(this.state)[0];
     if (!choice) {
-      return;
+      return false;
     }
 
     addPanel(this, 625, 354, 560, 124, PALETTE.paper);
@@ -234,6 +238,73 @@ export class HarborScene extends Phaser.Scene {
         },
       );
     });
+    return true;
+  }
+
+  private addChapterPanel() {
+    const visibleChapterQuest = getVisibleQuests(this.state).find(
+      (quest) => quest.chapterId && !this.state.questProgress[quest.id]?.claimed,
+    );
+    const chapterId = this.resolveChapterId(visibleChapterQuest?.chapterId);
+    const meta = chapterMeta[chapterId];
+    const progress = this.state.chapterProgress[chapterId];
+    const nextArea = areas.find(
+      (area) => area.chapterId === chapterId && area.hidden && !isAreaDiscovered(this.state, area),
+    );
+    const progressText = progress?.completed
+      ? "원정 기록 완료"
+      : `원정 기록 ${Math.min(100, Math.floor((progress?.score ?? 0) / 4))}%`;
+    const targetText = visibleChapterQuest
+      ? visibleChapterQuest.title
+      : nextArea
+        ? `${nextArea.name} 항로 조사`
+        : meta.description;
+
+    addPanel(this, 625, 354, 560, 124, PALETTE.paper);
+    this.add
+      .text(380, 318, "원정 기록", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "16px",
+        fontStyle: "900",
+        color: TEXT.secondary,
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(380, 344, chapterLabel(chapterId), {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "24px",
+        fontStyle: "900",
+        color: TEXT.primary,
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(380, 374, `${progressText} · 다음 목표: ${targetText}`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "15px",
+        fontStyle: "800",
+        color: TEXT.secondary,
+        wordWrap: { width: 485 },
+      })
+      .setOrigin(0, 0.5);
+
+    addTextButton(this, 746, 402, "원정 보기", () => this.scene.start("Quest"), {
+      width: 150,
+      height: 42,
+      fontSize: 15,
+      fill: meta.color,
+      iconKey: "icon-quest",
+      iconScale: 0.28,
+    });
+  }
+
+  private resolveChapterId(preferred?: ChapterId): ChapterId {
+    if (preferred) {
+      return preferred;
+    }
+    if (this.state.activeChapterId) {
+      return this.state.activeChapterId;
+    }
+    return chapterOrder.find((chapterId) => !this.state.chapterProgress[chapterId]?.completed) ?? "deep-crown-survey";
   }
 
   private addNavigation() {

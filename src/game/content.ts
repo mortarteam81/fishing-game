@@ -1,6 +1,8 @@
 import type {
   AreaDefinition,
+  ChapterId,
   FishDefinition,
+  GearRole,
   ItemDefinition,
   QuestDefinition,
   SeaFriendBehavior,
@@ -8,6 +10,8 @@ import type {
   SeaFriendHabitat,
   SeaFriendSize,
   StoryChoiceDefinition,
+  StoryCondition,
+  VoyageEventId,
 } from "./types";
 import { decorateGearItem } from "./gearRoles";
 
@@ -563,7 +567,228 @@ const legendFish: FishDraft[] = [
   },
 ];
 
-export const fish: FishDefinition[] = [...baseFish, ...generatedFish, ...legendFish].map(withFishProfile);
+type ExpeditionAreaBlueprint = Pick<AreaDefinition, "id" | "name" | "requiredLevel" | "theme" | "mapTexture" | "flavor" | "chapterId"> & {
+  eventId: VoyageEventId;
+  routeText: string;
+  requirements: StoryCondition[];
+  prefixes: readonly string[];
+};
+
+const expeditionAreaBlueprints: ExpeditionAreaBlueprint[] = [
+  {
+    id: "starwhale-lookout",
+    name: "별고래 관측로",
+    chapterId: "starwhale-expedition",
+    requiredLevel: 106,
+    theme: "moon",
+    mapTexture: "map-starwhale-lookout",
+    flavor: "별빛 물결 너머로 거대한 고래 그림자가 천천히 지나가는 관측 항로예요.",
+    eventId: "current-breakthrough",
+    routeText: "아기고래가 별빛 물결을 따라 첫 별고래 항로를 알려줬어요.",
+    prefixes: ["별눈", "관측", "망원", "은하", "초승"],
+    requirements: [
+      { kind: "levelAtLeast", level: 106 },
+      { kind: "companionAffinity", fishId: "rainbow-whale", affinity: 75 },
+      { kind: "collectionCount", count: 2, family: "whale" },
+      { kind: "storyFlag", flag: "ancient-witness" },
+      { kind: "voyageEventCleared", eventId: "current-breakthrough" },
+    ],
+  },
+  {
+    id: "galaxy-buoy-field",
+    name: "은하 부표지대",
+    chapterId: "starwhale-expedition",
+    requiredLevel: 112,
+    theme: "aurora",
+    mapTexture: "map-galaxy-buoy-field",
+    flavor: "은하빛 부표가 떠 있는 외양. 반짝이는 항로 신호가 계속 바뀌어요.",
+    eventId: "current-breakthrough",
+    routeText: "부표 사이의 빠른 해류를 돌파해 은하 항로가 기록됐어요.",
+    prefixes: ["은하", "부표", "성운", "항로", "반짝"],
+    requirements: [
+      { kind: "areaDiscovered", areaId: "starwhale-lookout" },
+      { kind: "voyageEventCleared", eventId: "current-breakthrough" },
+      { kind: "questClaimed", questId: "starwhale-launch" },
+    ],
+  },
+  {
+    id: "moonhalo-whale-bay",
+    name: "달무리 고래만",
+    chapterId: "starwhale-expedition",
+    requiredLevel: 118,
+    theme: "moon",
+    mapTexture: "map-moonhalo-whale-bay",
+    flavor: "달무리 아래에서 고래들의 노래가 둥글게 울리는 조용한 만이에요.",
+    eventId: "deep-shadow",
+    routeText: "깊은 그림자를 지나 달무리 고래만의 노랫길을 찾았어요.",
+    prefixes: ["달무리", "노래", "만월", "은파", "고래숨"],
+    requirements: [
+      { kind: "areaDiscovered", areaId: "galaxy-buoy-field" },
+      { kind: "voyageEventCleared", eventId: "deep-shadow" },
+      { kind: "researchRank", fishId: "rainbow-whale", rank: 2 },
+    ],
+  },
+  {
+    id: "meteor-coral-belt",
+    name: "유성 산호대",
+    chapterId: "starwhale-expedition",
+    requiredLevel: 124,
+    theme: "pearl",
+    mapTexture: "map-meteor-coral-belt",
+    flavor: "유성 조각을 품은 산호가 길게 이어져 밤마다 푸른 궤적을 그려요.",
+    eventId: "pirate-crab",
+    routeText: "장난꾸러기 해적게가 숨겨둔 지도 조각 덕분에 유성 산호대를 찾았어요.",
+    prefixes: ["유성", "푸른", "혜성", "궤적", "운석"],
+    requirements: [
+      { kind: "areaDiscovered", areaId: "moonhalo-whale-bay" },
+      { kind: "voyageEventCleared", eventId: "pirate-crab" },
+      { kind: "collectionCount", count: 120 },
+    ],
+  },
+  {
+    id: "stars-breath-open-sea",
+    name: "별숨 외양",
+    chapterId: "starwhale-expedition",
+    requiredLevel: 130,
+    theme: "aurora",
+    mapTexture: "map-stars-breath-open-sea",
+    flavor: "별고래가 숨을 내쉴 때마다 오로라 물안개가 피어나는 외양이에요.",
+    eventId: "storm-spout",
+    routeText: "폭풍 물기둥을 넘어 별숨 외양의 가장 넓은 길이 열렸어요.",
+    prefixes: ["별숨", "외양", "극야", "왕성", "숨결"],
+    requirements: [
+      { kind: "areaDiscovered", areaId: "meteor-coral-belt" },
+      { kind: "voyageEventCleared", eventId: "storm-spout" },
+      { kind: "questClaimed", questId: "starbreath-song" },
+      { kind: "companionAffinity", fishId: "rainbow-whale", affinity: 130 },
+    ],
+  },
+  {
+    id: "crown-seafloor-gate",
+    name: "왕관 해저문",
+    chapterId: "deep-crown-survey",
+    requiredLevel: 136,
+    theme: "trench",
+    mapTexture: "map-crown-seafloor-gate",
+    flavor: "심해 왕관성으로 향하는 첫 해저문. 오래된 문양이 희미하게 빛나요.",
+    eventId: "deep-shadow",
+    routeText: "심해 그림자를 지나 왕관 해저문의 윤곽이 드러났어요.",
+    prefixes: ["왕관", "문장", "해저문", "봉인", "푸른문"],
+    requirements: [
+      { kind: "questClaimed", questId: "starwhale-final" },
+      { kind: "levelAtLeast", level: 136 },
+      { kind: "voyageEventCleared", eventId: "deep-shadow" },
+      { kind: "equippedGearRole", role: "deepExplorer", synergyLevel: 1 },
+    ],
+  },
+  {
+    id: "black-pearl-abyss",
+    name: "흑진주 심연",
+    chapterId: "deep-crown-survey",
+    requiredLevel: 144,
+    theme: "trench",
+    mapTexture: "map-black-pearl-abyss",
+    flavor: "검은 진주빛이 깊은 물속에서 천천히 회전하는 심연이에요.",
+    eventId: "deep-shadow",
+    routeText: "동료가 어둠 속 등불을 밝혀 흑진주 심연의 길을 열었어요.",
+    prefixes: ["흑진주", "심연", "검은빛", "무저", "흑요"],
+    requirements: [
+      { kind: "areaDiscovered", areaId: "crown-seafloor-gate" },
+      { kind: "voyageEventCleared", eventId: "deep-shadow" },
+      { kind: "collectionCount", count: 5, family: "deep" },
+    ],
+  },
+  {
+    id: "silent-throne-reef",
+    name: "침묵 왕좌초",
+    chapterId: "deep-crown-survey",
+    requiredLevel: 152,
+    theme: "basalt",
+    mapTexture: "map-silent-throne-reef",
+    flavor: "왕좌처럼 솟은 바위초 사이로 아무 소리도 나지 않는 해역이에요.",
+    eventId: "reef-maze",
+    routeText: "암초 미로를 지나 침묵 왕좌초의 중심 좌표를 얻었어요.",
+    prefixes: ["침묵", "왕좌", "묵음", "검은초", "낮은노래"],
+    requirements: [
+      { kind: "areaDiscovered", areaId: "black-pearl-abyss" },
+      { kind: "voyageEventCleared", eventId: "reef-maze" },
+      { kind: "companionAffinity", fishId: "rainbow-whale", affinity: 160 },
+    ],
+  },
+  {
+    id: "ancient-lantern-stairs",
+    name: "고대 등불계단",
+    chapterId: "deep-crown-survey",
+    requiredLevel: 160,
+    theme: "trench",
+    mapTexture: "map-ancient-lantern-stairs",
+    flavor: "작은 등불들이 계단처럼 이어져 심해 아래로 길을 내는 장소예요.",
+    eventId: "storm-spout",
+    routeText: "물기둥 너머에서 고대 등불계단의 첫 불빛이 켜졌어요.",
+    prefixes: ["고대등불", "계단", "불씨", "청등", "오래된"],
+    requirements: [
+      { kind: "areaDiscovered", areaId: "silent-throne-reef" },
+      { kind: "voyageEventCleared", eventId: "storm-spout" },
+      { kind: "researchRank", fishId: "aurora-crown-mythic-nudibranch", rank: 2 },
+    ],
+  },
+  {
+    id: "deep-crown-castle",
+    name: "심해 왕관성",
+    chapterId: "deep-crown-survey",
+    requiredLevel: 170,
+    theme: "aurora",
+    mapTexture: "map-deep-crown-castle",
+    flavor: "심해 왕관 탐사의 최종 목적지. 검은 물 위로 왕관 같은 빛이 솟아요.",
+    eventId: "current-breakthrough",
+    routeText: "마지막 해류를 돌파하자 심해 왕관성이 지도에 새겨졌어요.",
+    prefixes: ["심해왕관", "성문", "왕성", "깊은관", "최후"],
+    requirements: [
+      { kind: "areaDiscovered", areaId: "ancient-lantern-stairs" },
+      { kind: "questClaimed", questId: "deep-crown-gate" },
+      { kind: "voyageEventCleared", eventId: "current-breakthrough" },
+      { kind: "equippedGearRole", role: "mythSeeker", synergyLevel: 1 },
+    ],
+  },
+];
+
+const starwhaleSpecies = [
+  { slug: "star-drifter", name: "별유영어", rarity: "common", family: "spirit", size: "small", behavior: ["drifting", "glowing"], base: 720, xp: 430, weight: 34 },
+  { slug: "prism-needlefish", name: "프리즘 바늘고기", rarity: "uncommon", family: "fish", size: "small", behavior: ["swift", "glowing"], base: 810, xp: 470, weight: 22 },
+  { slug: "moonhalo-skywhale", name: "달무리 하늘고래", rarity: "rare", family: "whale", size: "giant", behavior: ["drifting", "steady"], base: 980, xp: 560, weight: 12 },
+  { slug: "comet-oracle-clam", name: "혜성 예언조개", rarity: "epic", family: "mollusk", size: "medium", behavior: ["steady", "glowing"], base: 1280, xp: 690, weight: 7 },
+  { slug: "ancient-starwhale-skywhale", name: "고대 별고래", rarity: "legendary", family: "whale", size: "giant", behavior: ["ancient", "glowing"], base: 1740, xp: 880, weight: 3 },
+] as const;
+
+const deepCrownSpecies = [
+  { slug: "crown-lantern-eel", name: "왕관 등불장어", rarity: "common", family: "deep", size: "medium", behavior: ["nocturnal", "glowing"], base: 900, xp: 520, weight: 32 },
+  { slug: "black-pearl-crown-clam", name: "흑진주 왕관조개", rarity: "uncommon", family: "mollusk", size: "medium", behavior: ["steady", "glowing"], base: 1060, xp: 610, weight: 20 },
+  { slug: "throne-velvet-turtle", name: "왕좌 벨벳거북", rarity: "rare", family: "reptile", size: "large", behavior: ["heavy", "steady"], base: 1280, xp: 720, weight: 11 },
+  { slug: "shadow-mosaic-crab", name: "그림자 모자이크게", rarity: "epic", family: "crustacean", size: "medium", behavior: ["erratic", "shy"], base: 1540, xp: 820, weight: 6 },
+  { slug: "abyss-mythic-nudibranch", name: "심연 환상갯민숭달팽이", rarity: "ancient", family: "mollusk", size: "small", behavior: ["ancient", "glowing"], base: 2200, xp: 1100, weight: 2 },
+] as const;
+
+const expeditionFish: FishDraft[] = expeditionAreaBlueprints.flatMap((area, areaIndex) => {
+  const speciesList = area.chapterId === "starwhale-expedition" ? starwhaleSpecies : deepCrownSpecies;
+  return speciesList.map((species, speciesIndex) => ({
+    id: `${area.id}-${species.slug}`,
+    name: `${area.prefixes[speciesIndex]} ${species.name}`,
+    chapterId: area.chapterId,
+    areaIds: [area.id],
+    rarity: species.rarity,
+    family: species.family,
+    habitatTags: area.chapterId === "starwhale-expedition" ? ["moon", "aurora", "legend"] : ["trench", "ancient", "legend"],
+    size: species.size,
+    behaviorTags: [...species.behavior],
+    baseShells: species.base + areaIndex * 95 + speciesIndex * 34,
+    xp: species.xp + areaIndex * 48 + speciesIndex * 16,
+    spawnWeight: Math.max(1, species.weight - Math.floor(areaIndex / 2)),
+    funFact: `${area.name}에서만 들리는 오래된 원정 소문을 품은 바다 친구예요.`,
+    assetKey: `fish-${area.id}-${species.slug}`,
+  }));
+});
+
+export const fish: FishDefinition[] = [...baseFish, ...generatedFish, ...legendFish, ...expeditionFish].map(withFishProfile);
 
 const baseAreas: AreaDefinition[] = [
   {
@@ -711,7 +936,27 @@ const hiddenAreas: AreaDefinition[] = [
   },
 ];
 
-export const areas: AreaDefinition[] = [...baseAreas, ...generatedAreas, ...legendAreas, ...hiddenAreas];
+const expeditionAreas: AreaDefinition[] = expeditionAreaBlueprints.map((area) => ({
+  id: area.id,
+  name: area.name,
+  chapterId: area.chapterId,
+  requiredLevel: area.requiredLevel,
+  fishIds: expeditionFish.filter((entry) => entry.areaIds.includes(area.id)).map((entry) => entry.id),
+  backgroundKey: `bg-${area.id}`,
+  theme: area.theme,
+  mapTexture: area.mapTexture,
+  flavor: area.flavor,
+  hidden: true,
+  weatherPool: area.chapterId === "starwhale-expedition" ? ["moonTide", "aurora", "fog"] : ["storm", "fog", "aurora"],
+  route: {
+    discoveryLevel: area.requiredLevel,
+    discoveryHint: `${area.name} 근처에 ${area.eventId === "deep-shadow" ? "깊은 그림자" : "수상한 물결"}이 보여요.`,
+    revealText: area.routeText,
+    requirements: area.requirements,
+  },
+}));
+
+export const areas: AreaDefinition[] = [...baseAreas, ...generatedAreas, ...legendAreas, ...hiddenAreas, ...expeditionAreas];
 
 const baseItems: ItemDefinition[] = [
   {
@@ -1213,6 +1458,119 @@ const legendFlags: ItemDefinition[] = [
   },
 ];
 
+const expeditionGearThemes: Array<{
+  slug: string;
+  name: string;
+  chapterId: ChapterId;
+  color: string;
+  roles: GearRole[];
+  habitatBoost: SeaFriendHabitat;
+  familyBoost?: SeaFriendFamily;
+}> = [
+  { slug: "starwhale", name: "별고래", chapterId: "starwhale-expedition", color: "별빛 고래문양", roles: ["mythSeeker", "naturalist"], habitatBoost: "legend", familyBoost: "whale" },
+  { slug: "galaxy", name: "은하", chapterId: "starwhale-expedition", color: "은하 항법", roles: ["navigator", "mutationHunter"], habitatBoost: "aurora", familyBoost: "spirit" },
+  { slug: "moonhalo", name: "달무리", chapterId: "starwhale-expedition", color: "달무리 공명", roles: ["naturalist", "mythSeeker"], habitatBoost: "moon", familyBoost: "whale" },
+  { slug: "meteor", name: "유성", chapterId: "starwhale-expedition", color: "유성 궤적", roles: ["reeler", "mutationHunter"], habitatBoost: "pearl", familyBoost: "fish" },
+  { slug: "starsbreath", name: "별숨", chapterId: "starwhale-expedition", color: "별숨 오로라", roles: ["navigator", "mythSeeker"], habitatBoost: "aurora", familyBoost: "whale" },
+  { slug: "crown", name: "왕관", chapterId: "deep-crown-survey", color: "왕관 문장", roles: ["deepExplorer", "mythSeeker"], habitatBoost: "trench", familyBoost: "deep" },
+  { slug: "blackpearl", name: "흑진주", chapterId: "deep-crown-survey", color: "흑진주 광택", roles: ["deepExplorer", "naturalist"], habitatBoost: "trench", familyBoost: "mollusk" },
+  { slug: "silence", name: "침묵", chapterId: "deep-crown-survey", color: "침묵 왕좌", roles: ["stormbreaker", "reeler"], habitatBoost: "basalt", familyBoost: "crustacean" },
+  { slug: "ancientlantern", name: "고대등불", chapterId: "deep-crown-survey", color: "고대 등불", roles: ["deepExplorer", "mutationHunter"], habitatBoost: "ancient", familyBoost: "deep" },
+  { slug: "deepcrown", name: "심해왕관", chapterId: "deep-crown-survey", color: "심해 왕관", roles: ["mythSeeker", "deepExplorer"], habitatBoost: "ancient", familyBoost: "mollusk" },
+];
+
+const expeditionGearTiers = [
+  { slug: "scout", label: "정찰", cost: 1, power: 1 },
+  { slug: "voyage", label: "원정", cost: 1.45, power: 1.35 },
+  { slug: "myth", label: "비전", cost: 1.95, power: 1.75 },
+] as const;
+
+const expeditionRods: ItemDefinition[] = expeditionGearThemes.flatMap((theme, themeIndex) =>
+  expeditionGearTiers.map((tier, tierIndex) => ({
+    id: `${theme.slug}-${tier.slug}-rod`,
+    name: `${theme.name} ${tier.label} 낚싯대`,
+    chapterId: theme.chapterId,
+    kind: "rod",
+    shellCost: Math.round((24000 + themeIndex * 1250 + tierIndex * 5200) * tier.cost),
+    description: `${theme.color}을 따라 고난도 원정 친구를 끝까지 붙잡는 낚싯대예요.`,
+    roleTags: theme.roles,
+    setId: theme.slug,
+    effect: {
+      catchEase: 0.22 + tier.power * 0.025 + themeIndex * 0.002,
+      lureSpeed: 0.24 + tier.power * 0.028,
+      reelPower: 0.22 + tier.power * 0.035,
+      rareBoost: 0.18 + tier.power * 0.025,
+      mutationChance: 0.055 + tier.power * 0.012,
+      habitatBoost: theme.habitatBoost,
+      familyBoost: theme.familyBoost,
+      rarityBoosts: tierIndex >= 2 ? { legendary: 0.14, ancient: 0.1 } : { mythic: 0.1 },
+    },
+  })),
+);
+
+const expeditionBoats: ItemDefinition[] = expeditionGearThemes.flatMap((theme, themeIndex) =>
+  expeditionGearTiers.map((tier, tierIndex) => ({
+    id: `${theme.slug}-${tier.slug}-boat`,
+    name: `${theme.name} ${tier.label} 탐사선`,
+    chapterId: theme.chapterId,
+    kind: "boat",
+    shellCost: Math.round((29000 + themeIndex * 1460 + tierIndex * 6400) * tier.cost),
+    description: `${theme.color} 선체와 넓은 갑판을 갖춘 후반부 항해용 배예요.`,
+    roleTags: [theme.roles[0], "navigator"],
+    setId: theme.slug,
+    effect: {
+      boatSpeed: 0.55 + tier.power * 0.075,
+      catchEase: 0.045 + tier.power * 0.014,
+      lureSpeed: 0.095 + tier.power * 0.018,
+      rareBoost: 0.13 + tier.power * 0.02,
+      mutationChance: tierIndex >= 1 ? 0.045 + tier.power * 0.01 : 0.025,
+      habitatBoost: theme.habitatBoost,
+      familyBoost: theme.familyBoost,
+    },
+  })),
+);
+
+const expeditionBaits: ItemDefinition[] = expeditionGearThemes.flatMap((theme, themeIndex) =>
+  expeditionGearTiers.map((tier, tierIndex) => ({
+    id: `${theme.slug}-${tier.slug}-bait`,
+    name: `${theme.name} ${tier.label} 미끼`,
+    chapterId: theme.chapterId,
+    kind: "bait",
+    shellCost: Math.round((9800 + themeIndex * 640 + tierIndex * 2400) * tier.cost),
+    description: `${theme.name} 원정 해역의 향과 빛을 담은 특수 미끼예요.`,
+    roleTags: [theme.roles[1] ?? theme.roles[0], "naturalist"],
+    setId: theme.slug,
+    effect: {
+      rareBoost: 0.48 + tier.power * 0.07,
+      lureSpeed: 0.08 + tier.power * 0.018,
+      mutationChance: 0.035 + tier.power * 0.014,
+      habitatBoost: theme.habitatBoost,
+      familyBoost: theme.familyBoost,
+      rarityBoosts: tierIndex >= 2 ? { ancient: 0.16, legendary: 0.12 } : { mythic: 0.14 },
+    },
+  })),
+);
+
+const expeditionFlags: ItemDefinition[] = expeditionGearThemes.flatMap((theme, themeIndex) =>
+  expeditionGearTiers.map((tier, tierIndex) => ({
+    id: `${theme.slug}-${tier.slug}-flag`,
+    name: `${theme.name} ${tier.label} 깃발`,
+    chapterId: theme.chapterId,
+    kind: "boatCosmetic",
+    shellCost: Math.round((8600 + themeIndex * 560 + tierIndex * 1900) * tier.cost),
+    description: `${theme.color} 표식이 배 위에서 빛나는 원정 깃발이에요.`,
+    roleTags: theme.roles,
+    setId: theme.slug,
+    effect: {
+      boatSpeed: 0.07 + tier.power * 0.018,
+      rareBoost: 0.055 + tier.power * 0.016,
+      mutationChance: 0.03 + tier.power * 0.008,
+      habitatBoost: theme.habitatBoost,
+      familyBoost: theme.familyBoost,
+    },
+  })),
+);
+
 const rawItems: ItemDefinition[] = [
   ...baseItems,
   ...generatedRods,
@@ -1223,6 +1581,10 @@ const rawItems: ItemDefinition[] = [
   ...legendBoats,
   ...legendBaits,
   ...legendFlags,
+  ...expeditionRods,
+  ...expeditionBoats,
+  ...expeditionBaits,
+  ...expeditionFlags,
 ];
 
 export const items: ItemDefinition[] = rawItems.map(decorateGearItem);
@@ -1351,6 +1713,81 @@ export const quests: QuestDefinition[] = [
     ],
     rewards: { shells: 2600, xp: 760, itemId: "legend-voyager-rod" },
     effects: { setFlags: ["ancient-witness"] },
+  },
+  {
+    id: "starwhale-launch",
+    title: "별고래 원정 출항",
+    chapterId: "starwhale-expedition",
+    helper: "무지개 아기고래와 충분히 친해졌다면 별고래 관측로를 찾아 항해해요.",
+    requirements: [
+      { kind: "storyFlag", flag: "ancient-witness" },
+      { kind: "levelAtLeast", level: 106 },
+      { kind: "companionAffinity", fishId: "rainbow-whale", affinity: 75 },
+    ],
+    steps: [
+      { kind: "discoverArea", areaId: "starwhale-lookout" },
+      { kind: "clearVoyageEvent", eventId: "current-breakthrough" },
+      { kind: "catchFish", fishId: "starwhale-lookout-ancient-starwhale-skywhale", count: 1 },
+    ],
+    rewards: { shells: 3600, xp: 980, itemId: "starwhale-scout-flag" },
+    effects: { setFlags: ["starwhale-expedition"] },
+  },
+  {
+    id: "starbreath-song",
+    title: "별숨 외양의 노래",
+    chapterId: "starwhale-expedition",
+    helper: "별고래 원정의 노랫길을 따라 유성 산호대까지 항로를 넓혀요.",
+    requirements: [{ kind: "questClaimed", questId: "starwhale-launch" }],
+    steps: [
+      { kind: "discoverArea", areaId: "moonhalo-whale-bay" },
+      { kind: "clearVoyageEvent", eventId: "deep-shadow" },
+      { kind: "catchFish", fishId: "moonhalo-whale-bay-moonhalo-skywhale", count: 1 },
+      { kind: "raiseCompanionAffinity", fishId: "rainbow-whale", affinity: 130 },
+    ],
+    rewards: { shells: 4800, xp: 1240, itemId: "moonhalo-voyage-bait" },
+    effects: { setFlags: ["starbreath-song"] },
+  },
+  {
+    id: "starwhale-final",
+    title: "별숨 외양 기록",
+    chapterId: "starwhale-expedition",
+    helper: "별숨 외양의 전설급 친구를 만나 별고래 원정 기록을 완성해요.",
+    requirements: [{ kind: "questClaimed", questId: "starbreath-song" }],
+    steps: [
+      { kind: "discoverArea", areaId: "stars-breath-open-sea" },
+      { kind: "clearVoyageEvent", eventId: "storm-spout" },
+      { kind: "catchFish", fishId: "stars-breath-open-sea-ancient-starwhale-skywhale", count: 1 },
+    ],
+    rewards: { shells: 6200, xp: 1560, itemId: "starsbreath-myth-boat" },
+    effects: { setFlags: ["starwhale-complete"] },
+  },
+  {
+    id: "deep-crown-gate",
+    title: "왕관 해저문 개방",
+    chapterId: "deep-crown-survey",
+    helper: "심해 탐사 세팅을 갖추고 왕관 해저문 너머의 깊은 항로를 찾아요.",
+    requirements: [{ kind: "questClaimed", questId: "starwhale-final" }],
+    steps: [
+      { kind: "discoverArea", areaId: "crown-seafloor-gate" },
+      { kind: "clearVoyageEvent", eventId: "deep-shadow" },
+      { kind: "ownItem", itemId: "crown-scout-rod" },
+    ],
+    rewards: { shells: 7200, xp: 1760, itemId: "crown-scout-rod" },
+    effects: { setFlags: ["deep-crown-survey"] },
+  },
+  {
+    id: "deep-crown-castle",
+    title: "심해 왕관성 발견",
+    chapterId: "deep-crown-survey",
+    helper: "고대 등불계단을 지나 심해 왕관성의 마지막 문을 열어요.",
+    requirements: [{ kind: "questClaimed", questId: "deep-crown-gate" }],
+    steps: [
+      { kind: "discoverArea", areaId: "deep-crown-castle" },
+      { kind: "clearVoyageEvent", eventId: "current-breakthrough" },
+      { kind: "catchFish", fishId: "deep-crown-castle-abyss-mythic-nudibranch", count: 1 },
+    ],
+    rewards: { shells: 9600, xp: 2300, itemId: "deepcrown-myth-flag" },
+    effects: { setFlags: ["deep-crown-complete"] },
   },
 ];
 

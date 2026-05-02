@@ -1,15 +1,17 @@
 import Phaser from "phaser";
 import { items } from "../game/content";
-import { roleColorForItem, roleLabelsForItem } from "../game/gearRoles";
+import { gearRoleMeta, roleColorForItem, roleLabelsForItem } from "../game/gearRoles";
 import { ensureSvgTextures, itemPreviewTexture } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { buyItem, canBuyItem, equipItem, getEquippedGearBuild, refreshQuestCompletion } from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
 import { boatMapTextureKey, itemIconTextureKey } from "../game/textureKeys";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
-import type { ItemDefinition, PlayerState, Rarity, SeaFriendFamily, SeaFriendHabitat } from "../game/types";
+import type { ChapterId, GearRole, ItemDefinition, PlayerState, Rarity, SeaFriendFamily, SeaFriendHabitat } from "../game/types";
 
 type ExchangeCategory = "rod" | "bait" | "boat" | "boatCosmetic";
+type ChapterFilter = "all" | "base" | ChapterId;
+type RoleFilter = "all" | GearRole;
 
 const categories: { id: ExchangeCategory; label: string }[] = [
   { id: "rod", label: "낚싯대" },
@@ -19,6 +21,13 @@ const categories: { id: ExchangeCategory; label: string }[] = [
 ];
 
 const PAGE_SIZE = 4;
+const chapterFilters: { id: ChapterFilter; label: string }[] = [
+  { id: "all", label: "전체" },
+  { id: "base", label: "기본" },
+  { id: "starwhale-expedition", label: "별고래" },
+  { id: "deep-crown-survey", label: "왕관" },
+];
+const roleFilters: RoleFilter[] = ["all", "navigator", "reeler", "naturalist", "stormbreaker", "deepExplorer", "mythSeeker", "mutationHunter"];
 
 const rarityEffectLabel: Record<Rarity, string> = {
   common: "흔함",
@@ -63,14 +72,18 @@ const habitatEffectLabel: Record<SeaFriendHabitat, string> = {
 export class ExchangeScene extends Phaser.Scene {
   private state!: PlayerState;
   private category: ExchangeCategory = "rod";
+  private chapterFilter: ChapterFilter = "all";
+  private roleFilter: RoleFilter = "all";
   private page = 0;
 
   constructor() {
     super("Exchange");
   }
 
-  init(data: { category?: ExchangeCategory; page?: number }) {
+  init(data: { category?: ExchangeCategory; chapterFilter?: ChapterFilter; roleFilter?: RoleFilter; page?: number }) {
     this.category = data.category ?? "rod";
+    this.chapterFilter = data.chapterFilter ?? "all";
+    this.roleFilter = data.roleFilter ?? "all";
     this.page = Math.max(0, data.page ?? 0);
   }
 
@@ -83,6 +96,7 @@ export class ExchangeScene extends Phaser.Scene {
     this.addBuildSummary();
 
     this.addCategoryTabs();
+    this.addFilterTabs();
     void this.addItemGrid();
 
     addTextButton(this, 92, 500, "항구", () => this.scene.start("Harbor"), {
@@ -102,7 +116,7 @@ export class ExchangeScene extends Phaser.Scene {
         272 + index * 138,
         108,
         category.label,
-        () => this.scene.restart({ category: category.id, page: 0 }),
+        () => this.scene.restart({ category: category.id, chapterFilter: this.chapterFilter, roleFilter: this.roleFilter, page: 0 }),
         {
           width: 122,
           height: 38,
@@ -110,6 +124,34 @@ export class ExchangeScene extends Phaser.Scene {
           fill: this.category === category.id ? PALETTE.butter : PALETTE.seaFoam,
         },
       );
+    });
+  }
+
+  private addFilterTabs() {
+    chapterFilters.forEach((filter, index) => {
+      addTextButton(this, 234 + index * 126, 148, filter.label, () => this.scene.restart({
+        category: this.category,
+        chapterFilter: filter.id,
+        roleFilter: this.roleFilter,
+        page: 0,
+      }), {
+        width: 112,
+        height: 34,
+        fontSize: 14,
+        fill: this.chapterFilter === filter.id ? PALETTE.butter : PALETTE.seaFoam,
+      });
+    });
+
+    addTextButton(this, 792, 148, `역할: ${this.roleFilterLabel()}`, () => this.scene.restart({
+      category: this.category,
+      chapterFilter: this.chapterFilter,
+      roleFilter: this.nextRoleFilter(),
+      page: 0,
+    }), {
+      width: 170,
+      height: 34,
+      fontSize: 14,
+      fill: this.roleFilter === "all" ? PALETTE.seaFoam : PALETTE.lavender,
     });
   }
 
@@ -145,7 +187,11 @@ export class ExchangeScene extends Phaser.Scene {
   }
 
   private async addItemGrid() {
-    const filtered = items.filter((item) => item.kind === this.category);
+    const filtered = items.filter((item) =>
+      item.kind === this.category &&
+      (this.chapterFilter === "all" ? true : this.chapterFilter === "base" ? !item.chapterId : item.chapterId === this.chapterFilter) &&
+      (this.roleFilter === "all" ? true : item.roleTags?.includes(this.roleFilter))
+    );
     const maxPage = Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1);
     this.page = Phaser.Math.Clamp(this.page, 0, maxPage);
     const visibleItems = filtered.slice(this.page * PAGE_SIZE, this.page * PAGE_SIZE + PAGE_SIZE);
@@ -175,14 +221,14 @@ export class ExchangeScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    addTextButton(this, 362, 500, "이전", () => this.scene.restart({ category: this.category, page: this.page - 1 }), {
+    addTextButton(this, 362, 500, "이전", () => this.scene.restart({ category: this.category, chapterFilter: this.chapterFilter, roleFilter: this.roleFilter, page: this.page - 1 }), {
       width: 108,
       height: 42,
       fontSize: 17,
       fill: PALETTE.seaFoam,
       disabled: this.page <= 0,
     });
-    addTextButton(this, 598, 500, "다음", () => this.scene.restart({ category: this.category, page: this.page + 1 }), {
+    addTextButton(this, 598, 500, "다음", () => this.scene.restart({ category: this.category, chapterFilter: this.chapterFilter, roleFilter: this.roleFilter, page: this.page + 1 }), {
       width: 108,
       height: 42,
       fontSize: 17,
@@ -195,7 +241,7 @@ export class ExchangeScene extends Phaser.Scene {
     const col = index % 2;
     const row = Math.floor(index / 2);
     const x = 285 + col * 390;
-    const y = 188 + row * 118;
+    const y = 224 + row * 112;
     const owned = this.state.ownedItemIds.includes(item.id);
     const equipped =
       this.state.equippedRodId === item.id ||
@@ -217,12 +263,12 @@ export class ExchangeScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
     this.add
-      .text(x - 110, y - 4, item.description, {
+      .text(x - 110, y - 4, this.compactCardText(item.description, 32), {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "13px",
+        fontSize: "12px",
         fontStyle: "700",
         color: TEXT.secondary,
-        wordWrap: { width: 190 },
+        wordWrap: { width: 150 },
       })
       .setOrigin(0, 0.5);
     this.add
@@ -231,7 +277,7 @@ export class ExchangeScene extends Phaser.Scene {
         fontSize: "12px",
         fontStyle: "800",
         color: TEXT.secondary,
-        wordWrap: { width: 190 },
+        wordWrap: { width: 150 },
       })
       .setOrigin(0, 0.5);
 
@@ -245,7 +291,12 @@ export class ExchangeScene extends Phaser.Scene {
       () => {
         const updated = owned ? equipItem(this.state, item.id) : buyItem(this.state, item.id);
         saveGame(refreshQuestCompletion(updated));
-        this.scene.restart();
+        this.scene.restart({
+          category: this.category,
+          chapterFilter: this.chapterFilter,
+          roleFilter: this.roleFilter,
+          page: this.page,
+        });
       },
       {
         width: 118,
@@ -284,7 +335,15 @@ export class ExchangeScene extends Phaser.Scene {
       ...Object.entries(effect.rarityBoosts ?? {}).map(([rarity, boost]) => `${rarityEffectLabel[rarity as Rarity]} +${Math.round((boost ?? 0) * 100)}`),
     ].filter(Boolean);
 
-    return parts.length > 0 ? parts.join(" · ") : "기본 장비";
+    if (parts.length === 0) {
+      return "기본 장비";
+    }
+    const summary = parts.slice(0, 3).join(" · ");
+    return parts.length > 3 ? `${summary} 외 ${parts.length - 3}` : summary;
+  }
+
+  private compactCardText(value: string, maxLength: number) {
+    return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
   }
 
   private addRoleBadge(item: ItemDefinition, x: number, y: number) {
@@ -304,6 +363,15 @@ export class ExchangeScene extends Phaser.Scene {
         align: "center",
       })
       .setOrigin(0.5);
+  }
+
+  private roleFilterLabel() {
+    return this.roleFilter === "all" ? "전체" : gearRoleMeta[this.roleFilter].shortLabel;
+  }
+
+  private nextRoleFilter(): RoleFilter {
+    const index = roleFilters.indexOf(this.roleFilter);
+    return roleFilters[(index + 1) % roleFilters.length];
   }
 
 }

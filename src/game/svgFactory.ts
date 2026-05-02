@@ -378,6 +378,11 @@ function themeFromAreaId(areaId: string): string {
   if (areaId.includes("pearl")) return "pearl";
   if (areaId.includes("storm")) return "storm";
   if (areaId.includes("moon")) return "moon";
+  if (areaId.includes("starwhale") || areaId.includes("galaxy") || areaId.includes("stars-breath")) return "aurora";
+  if (areaId.includes("moonhalo")) return "moon";
+  if (areaId.includes("meteor")) return "pearl";
+  if (areaId.includes("crown") || areaId.includes("black-pearl") || areaId.includes("ancient-lantern")) return "trench";
+  if (areaId.includes("silent-throne")) return "basalt";
   if (areaId.includes("amber")) return "amber";
   if (areaId.includes("glacier")) return "glacier";
   if (areaId.includes("lantern")) return "trench";

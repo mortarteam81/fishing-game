@@ -13,6 +13,7 @@ import {
   previewResearchCatch,
   seedResearchRecord,
 } from "./research";
+import { getVoyageEvent, voyageEventCleared } from "./voyageEvents";
 import type {
   AreaDefinition,
   CatchMutationId,
@@ -26,6 +27,7 @@ import type {
   StoryCondition,
   StoryEffect,
   StoryRewards,
+  VoyageEventId,
 } from "./types";
 
 type RecordCatchDetails = {
@@ -76,6 +78,23 @@ export function canDiscoverArea(state: PlayerState, area: AreaDefinition): boole
   }
   const discoveryLevel = Math.max(1, route.discoveryLevel - (getEquippedGearBuild(state).primaryRole === "navigator" ? 2 : 0));
   return state.level >= discoveryLevel && requirementsMet(state, route.requirements);
+}
+
+export function requiredVoyageEventForArea(area: AreaDefinition): VoyageEventId | undefined {
+  return area.route?.requirements?.find((condition) => condition.kind === "voyageEventCleared")?.eventId;
+}
+
+export function canAttemptVoyageEventForArea(state: PlayerState, area: AreaDefinition): boolean {
+  if (!area.hidden || state.discoveredAreaIds.includes(area.id) || !area.route) {
+    return false;
+  }
+  const requiredEventId = requiredVoyageEventForArea(area);
+  if (!requiredEventId || voyageEventCleared(state, requiredEventId)) {
+    return false;
+  }
+  const discoveryLevel = Math.max(1, area.route.discoveryLevel - (getEquippedGearBuild(state).primaryRole === "navigator" ? 2 : 0));
+  const otherRequirements = (area.route.requirements ?? []).filter((condition) => condition.kind !== "voyageEventCleared");
+  return state.level >= discoveryLevel && requirementsMet(state, otherRequirements);
 }
 
 export function discoverArea(state: PlayerState, areaId: string): PlayerState {
@@ -336,6 +355,12 @@ export function stepProgress(state: PlayerState, step: QuestStep): number {
       );
     case "collectVariants":
       return Math.min(countCollectedVariants(state.variantCollection), step.count);
+    case "clearVoyageEvent":
+      return voyageEventCleared(state, step.eventId) ? 1 : 0;
+    case "raiseCompanionAffinity":
+      return Math.min(state.affinity[step.fishId] ?? 0, step.affinity);
+    case "discoverArea":
+      return state.discoveredAreaIds.includes(step.areaId) || state.unlockedAreaIds.includes(step.areaId) ? 1 : 0;
   }
 }
 
@@ -349,12 +374,16 @@ export function stepTarget(step: QuestStep): number {
       return step.level;
     case "ownItem":
     case "unlockArea":
+    case "clearVoyageEvent":
+    case "discoverArea":
       return 1;
     case "researchRank":
       return step.rank;
     case "completeResearch":
     case "collectVariants":
       return step.count;
+    case "raiseCompanionAffinity":
+      return step.affinity;
   }
 }
 
@@ -378,6 +407,12 @@ export function stepLabel(step: QuestStep): string {
       return `연구 완료 ${step.count}종 달성`;
     case "collectVariants":
       return `변이 카드 ${step.count}장 기록`;
+    case "clearVoyageEvent":
+      return `${getVoyageEvent(step.eventId)?.label ?? "위험 항로"} 클리어`;
+    case "raiseCompanionAffinity":
+      return `${getFish(step.fishId)?.name ?? "동료"} 친밀도 ${step.affinity}`;
+    case "discoverArea":
+      return `${areas.find((area) => area.id === step.areaId)?.name ?? "새 해역"} 발견`;
   }
 }
 
@@ -397,6 +432,26 @@ export function conditionMet(state: PlayerState, condition: StoryCondition): boo
       return getResearchRank(state.researchProgress[condition.fishId]?.points ?? 0) >= condition.rank;
     case "collectedVariants":
       return countCollectedVariants(state.variantCollection) >= condition.count;
+    case "levelAtLeast":
+      return state.level >= condition.level;
+    case "collectionCount": {
+      const entries = condition.family
+        ? fish.filter((entry) => entry.family === condition.family && (state.collection[entry.id] ?? 0) > 0)
+        : Object.entries(state.collection).filter(([, count]) => count > 0);
+      return entries.length >= condition.count;
+    }
+    case "companionAffinity":
+      return (state.affinity[condition.fishId] ?? 0) >= condition.affinity;
+    case "equippedGearRole": {
+      const build = getEquippedGearBuild(state);
+      return build.primaryRole === condition.role && build.synergyLevel >= (condition.synergyLevel ?? 0);
+    }
+    case "ownedItem":
+      return state.ownedItemIds.includes(condition.itemId);
+    case "areaDiscovered":
+      return state.discoveredAreaIds.includes(condition.areaId) || state.unlockedAreaIds.includes(condition.areaId);
+    case "voyageEventCleared":
+      return voyageEventCleared(state, condition.eventId);
   }
 }
 
@@ -446,8 +501,37 @@ export function claimQuest(state: PlayerState, questId: string): PlayerState {
 
   next = grantStoryRewards(next, quest.rewards);
   next = applyStoryEffect(next, quest.effects);
+  next = markChapterProgress(next, quest.chapterId, quest.id.includes("final") || quest.id.includes("crown-castle") ? 400 : 140);
 
   return addXp(next, quest.rewards.xp ?? 0);
+}
+
+export function recordVoyageEventResult(
+  state: PlayerState,
+  eventId: VoyageEventId,
+  success: boolean,
+): PlayerState {
+  const event = getVoyageEvent(eventId);
+  const current = state.voyageEventHistory[eventId] ?? { attempts: 0, successes: 0 };
+  const reward = event?.reward ?? { shells: 120, xp: 40, affinity: 2 };
+  const history = {
+    ...state.voyageEventHistory,
+    [eventId]: {
+      attempts: current.attempts + 1,
+      successes: current.successes + (success ? 1 : 0),
+      lastOutcome: success ? "success" as const : "fail" as const,
+    },
+  };
+  const withReward = rewardEquippedCompanionAffinity(
+    {
+      ...state,
+      shells: state.shells + Math.round(reward.shells * (success ? 1 : 0.32)),
+      voyageEventHistory: history,
+    },
+    success ? reward.affinity : Math.max(1, Math.floor(reward.affinity / 2)),
+  );
+  const progressed = markChapterProgress(withReward, state.activeChapterId, success ? 90 : 25);
+  return addXp(progressed, Math.round(reward.xp * (success ? 1 : 0.38)));
 }
 
 export function applyStoryChoice(
@@ -534,6 +618,27 @@ function applyStoryEffect(state: PlayerState, effect?: StoryEffect): PlayerState
       ...Object.fromEntries((effect.setFlags ?? []).map((flag) => [flag, true])),
     },
     unlockedAreaIds: Array.from(new Set([...state.unlockedAreaIds, ...(effect.unlockAreaIds ?? [])])),
+  };
+}
+
+function markChapterProgress(state: PlayerState, chapterId: PlayerState["activeChapterId"], score: number): PlayerState {
+  if (!chapterId) {
+    return state;
+  }
+
+  const current = state.chapterProgress[chapterId] ?? { started: false, completed: false, score: 0 };
+  const nextScore = current.score + score;
+  return {
+    ...state,
+    activeChapterId: chapterId,
+    chapterProgress: {
+      ...state.chapterProgress,
+      [chapterId]: {
+        started: true,
+        completed: current.completed || nextScore >= 400,
+        score: nextScore,
+      },
+    },
   };
 }
 

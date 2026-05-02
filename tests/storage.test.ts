@@ -160,7 +160,7 @@ describe("save slots", () => {
 
     const loaded = loadGame();
 
-    expect(loaded.saveVersion).toBe(6);
+    expect(loaded.saveVersion).toBe(7);
     expect(loaded.collection["sunny-minnow"]).toBe(4);
     expect(typeof loaded.collection["sunny-minnow"]).toBe("number");
     expect(loaded.researchProgress["sunny-minnow"].catches).toBe(4);
@@ -172,6 +172,8 @@ describe("save slots", () => {
     expect(loaded.affinity["rainbow-whale"]).toBeGreaterThan(0);
     expect(loaded.affinity["sunny-minnow"]).toBeGreaterThan(0);
     expect(loaded.discoveredAreaIds).toEqual([]);
+    expect(loaded.chapterProgress["starwhale-expedition"]).toMatchObject({ started: false, completed: false, score: 0 });
+    expect(loaded.voyageEventHistory["current-breakthrough"]).toMatchObject({ attempts: 0, successes: 0 });
   });
 
   it("round-trips variants through main save and save slots", () => {

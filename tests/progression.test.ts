@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyStoryChoice,
   buyItem,
+  canAttemptVoyageEventForArea,
   claimQuest,
   canDiscoverArea,
   discoverArea,
@@ -14,6 +15,7 @@ import {
   getRareBoost,
   getVisibleQuests,
   recordCatch,
+  recordVoyageEventResult,
   refreshQuestCompletion,
   stepProgress,
   unlockAreasForLevel,
@@ -165,5 +167,58 @@ describe("progression", () => {
 
     expect(equipped.equippedCompanionIds[0]).toBe("sunny-minnow");
     expect(equipped.equippedCompanionIds).toContain("rainbow-whale");
+  });
+
+  it("gates expedition areas behind story, companion affinity, collection, and voyage events", () => {
+    const area = getArea("starwhale-lookout");
+    expect(area).toBeTruthy();
+
+    const levelOnly = { ...createInitialState(), level: 106 };
+    expect(canAttemptVoyageEventForArea(levelOnly, area!)).toBe(false);
+    expect(canDiscoverArea(levelOnly, area!)).toBe(false);
+
+    const prepared = {
+      ...createInitialState(),
+      level: 106,
+      storyFlags: { "ancient-witness": true },
+      collection: {
+        "rainbow-whale": 1,
+        "moonlit-current-skywhale": 1,
+      },
+      affinity: {
+        ...createInitialState().affinity,
+        "rainbow-whale": 75,
+      },
+    };
+
+    expect(canDiscoverArea(prepared, area!)).toBe(false);
+    expect(canAttemptVoyageEventForArea(prepared, area!)).toBe(true);
+
+    const clearedRoute = recordVoyageEventResult(prepared, "current-breakthrough", true);
+    expect(clearedRoute.voyageEventHistory["current-breakthrough"].successes).toBe(1);
+    expect(canDiscoverArea(clearedRoute, area!)).toBe(true);
+
+    const discovered = discoverArea(clearedRoute, "starwhale-lookout");
+    expect(discovered.discoveredAreaIds).toContain("starwhale-lookout");
+    expect(discovered.unlockedAreaIds).toContain("starwhale-lookout");
+  });
+
+  it("records failed voyage events without deleting progress or owned gear", () => {
+    const state = {
+      ...createInitialState(),
+      collection: { "sunny-minnow": 4 },
+      ownedItemIds: [...createInitialState().ownedItemIds, "sparkle-rod"],
+    };
+
+    const failed = recordVoyageEventResult(state, "reef-maze", false);
+
+    expect(failed.voyageEventHistory["reef-maze"]).toMatchObject({
+      attempts: 1,
+      successes: 0,
+      lastOutcome: "fail",
+    });
+    expect(failed.collection).toEqual(state.collection);
+    expect(failed.ownedItemIds).toEqual(state.ownedItemIds);
+    expect(failed.shells).toBeGreaterThan(state.shells);
   });
 });

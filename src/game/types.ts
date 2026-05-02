@@ -71,6 +71,15 @@ export type WeatherDefinition = {
   };
 };
 
+export type ChapterId = "starwhale-expedition" | "deep-crown-survey";
+
+export type VoyageEventId =
+  | "current-breakthrough"
+  | "deep-shadow"
+  | "pirate-crab"
+  | "storm-spout"
+  | "reef-maze";
+
 export type GearRole =
   | "starter"
   | "navigator"
@@ -112,6 +121,37 @@ export type StoryCondition =
   | {
       kind: "collectedVariants";
       count: number;
+    }
+  | {
+      kind: "levelAtLeast";
+      level: number;
+    }
+  | {
+      kind: "collectionCount";
+      count: number;
+      family?: SeaFriendFamily;
+    }
+  | {
+      kind: "companionAffinity";
+      fishId: string;
+      affinity: number;
+    }
+  | {
+      kind: "equippedGearRole";
+      role: GearRole;
+      synergyLevel?: number;
+    }
+  | {
+      kind: "ownedItem";
+      itemId: string;
+    }
+  | {
+      kind: "areaDiscovered";
+      areaId: string;
+    }
+  | {
+      kind: "voyageEventCleared";
+      eventId: VoyageEventId;
     };
 
 export type StoryRewards = {
@@ -142,6 +182,7 @@ export type VariantCollection = Partial<Record<CatchMutationId, number>>;
 export type FishDefinition = {
   id: string;
   name: string;
+  chapterId?: ChapterId;
   areaIds: string[];
   rarity: Rarity;
   family: SeaFriendFamily;
@@ -158,6 +199,7 @@ export type FishDefinition = {
 export type AreaDefinition = {
   id: string;
   name: string;
+  chapterId?: ChapterId;
   requiredLevel: number;
   fishIds: string[];
   backgroundKey: string;
@@ -177,6 +219,7 @@ export type AreaDefinition = {
 export type ItemDefinition = {
   id: string;
   name: string;
+  chapterId?: ChapterId;
   kind: "rod" | "bait" | "boat" | "boatCosmetic";
   shellCost: number;
   description: string;
@@ -253,10 +296,24 @@ export type QuestStep =
   | {
       kind: "collectVariants";
       count: number;
+    }
+  | {
+      kind: "clearVoyageEvent";
+      eventId: VoyageEventId;
+    }
+  | {
+      kind: "raiseCompanionAffinity";
+      fishId: string;
+      affinity: number;
+    }
+  | {
+      kind: "discoverArea";
+      areaId: string;
     };
 
 export type QuestDefinition = {
   id: string;
+  chapterId?: ChapterId;
   title: string;
   helper: string;
   steps: QuestStep[];
@@ -287,10 +344,13 @@ export type QuestProgress = {
 };
 
 export type PlayerState = {
-  saveVersion: 6;
+  saveVersion: 7;
   shells: number;
   level: number;
   xp: number;
+  activeChapterId?: ChapterId;
+  chapterProgress: Record<ChapterId, { started: boolean; completed: boolean; score: number }>;
+  voyageEventHistory: Record<VoyageEventId, { attempts: number; successes: number; lastOutcome?: "success" | "fail" }>;
   collection: Record<string, number>;
   researchProgress: Record<string, DexResearchRecord>;
   variantCollection: Record<string, VariantCollection>;

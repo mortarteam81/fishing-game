@@ -1,16 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { areas, fish, items, quests, storyChoices } from "../src/game/content";
 import { gearRoleMeta } from "../src/game/gearRoles";
+import { voyageEvents } from "../src/game/voyageEvents";
 import { weatherDefinitions } from "../src/game/weather";
 
 describe("content data", () => {
   it("keeps catchable sea creatures wired to valid areas", () => {
     const fishIds = new Set(fish.map((entry) => entry.id));
     const areaIds = new Set(areas.map((entry) => entry.id));
+    const eventIds = new Set(voyageEvents.map((event) => event.id));
 
-    expect(fish).toHaveLength(129);
-    expect(areas).toHaveLength(21);
+    expect(fish).toHaveLength(179);
+    expect(areas).toHaveLength(31);
     expect(fishIds.size).toBe(fish.length);
+    expect(areas.filter((area) => area.chapterId)).toHaveLength(10);
+    expect(fish.filter((entry) => entry.chapterId)).toHaveLength(50);
 
     for (const area of areas) {
       expect(area.fishIds.length).toBeGreaterThan(0);
@@ -18,6 +22,14 @@ describe("content data", () => {
         expect(area.route?.discoveryLevel).toBeGreaterThan(0);
         expect(area.route?.discoveryHint).toBeTruthy();
         expect(area.route?.revealText).toBeTruthy();
+      }
+      for (const requirement of area.route?.requirements ?? []) {
+        if (requirement.kind === "voyageEventCleared") {
+          expect(eventIds.has(requirement.eventId)).toBe(true);
+        }
+        if (requirement.kind === "areaDiscovered") {
+          expect(areaIds.has(requirement.areaId)).toBe(true);
+        }
       }
       for (const weatherId of area.weatherPool ?? []) {
         expect(weatherDefinitions[weatherId]).toBeTruthy();
@@ -44,19 +56,28 @@ describe("content data", () => {
     const areaIds = new Set(areas.map((entry) => entry.id));
     const itemIds = new Set(items.map((entry) => entry.id));
     const questIds = new Set(quests.map((entry) => entry.id));
+    const eventIds = new Set(voyageEvents.map((event) => event.id));
 
     expect(itemIds.size).toBe(items.length);
-    expect(items.filter((item) => item.kind === "rod")).toHaveLength(45);
-    expect(items.filter((item) => item.kind === "boat")).toHaveLength(39);
-    expect(items.filter((item) => item.kind === "bait")).toHaveLength(42);
-    expect(items.filter((item) => item.kind === "boatCosmetic")).toHaveLength(43);
+    expect(items.filter((item) => item.kind === "rod")).toHaveLength(75);
+    expect(items.filter((item) => item.kind === "boat")).toHaveLength(69);
+    expect(items.filter((item) => item.kind === "bait")).toHaveLength(72);
+    expect(items.filter((item) => item.kind === "boatCosmetic")).toHaveLength(73);
+    expect(items.filter((item) => item.chapterId && item.kind === "rod")).toHaveLength(30);
+    expect(items.filter((item) => item.chapterId && item.kind === "boat")).toHaveLength(30);
+    expect(items.filter((item) => item.chapterId && item.kind === "bait")).toHaveLength(30);
+    expect(items.filter((item) => item.chapterId && item.kind === "boatCosmetic")).toHaveLength(30);
     for (const item of items) {
       expect(item.roleTags?.length).toBeGreaterThan(0);
       for (const role of item.roleTags ?? []) {
         expect(gearRoleMeta[role]).toBeTruthy();
       }
+      if (item.chapterId) {
+        expect(item.effect).toBeTruthy();
+        expect(item.setId).toBeTruthy();
+      }
     }
-    expect(quests).toHaveLength(10);
+    expect(quests).toHaveLength(15);
     expect(questIds.size).toBe(quests.length);
 
     for (const quest of quests) {
@@ -67,6 +88,21 @@ describe("content data", () => {
       for (const requirement of quest.requirements ?? []) {
         if (requirement.kind === "questClaimed") {
           expect(questIds.has(requirement.questId)).toBe(true);
+        }
+        if (requirement.kind === "companionAffinity") {
+          expect(fishIds.has(requirement.fishId)).toBe(true);
+        }
+        if (requirement.kind === "ownedItem") {
+          expect(itemIds.has(requirement.itemId)).toBe(true);
+        }
+        if (requirement.kind === "areaDiscovered") {
+          expect(areaIds.has(requirement.areaId)).toBe(true);
+        }
+        if (requirement.kind === "voyageEventCleared") {
+          expect(eventIds.has(requirement.eventId)).toBe(true);
+        }
+        if (requirement.kind === "equippedGearRole") {
+          expect(gearRoleMeta[requirement.role]).toBeTruthy();
         }
       }
 
@@ -88,6 +124,15 @@ describe("content data", () => {
           expect(fishIds.has(step.fishId)).toBe(true);
           expect(step.rank).toBeGreaterThan(0);
         }
+        if (step.kind === "clearVoyageEvent") {
+          expect(eventIds.has(step.eventId)).toBe(true);
+        }
+        if (step.kind === "raiseCompanionAffinity") {
+          expect(fishIds.has(step.fishId)).toBe(true);
+        }
+        if (step.kind === "discoverArea") {
+          expect(areaIds.has(step.areaId)).toBe(true);
+        }
       }
     }
 
@@ -95,6 +140,9 @@ describe("content data", () => {
       for (const requirement of choice.requirements) {
         if (requirement.kind === "questClaimed") {
           expect(questIds.has(requirement.questId)).toBe(true);
+        }
+        if (requirement.kind === "voyageEventCleared") {
+          expect(eventIds.has(requirement.eventId)).toBe(true);
         }
       }
       for (const option of choice.options) {

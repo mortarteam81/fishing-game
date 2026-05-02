@@ -1,13 +1,14 @@
 import { areas, quests } from "./content";
 import { normalizeAffinity, normalizeCompanions, normalizeEquippedCompanions, STARTER_COMPANION_ID } from "./companions";
 import { seedResearchRecord } from "./research";
-import type { CaptainStyle, DexResearchRecord, PlayerState, VariantCollection } from "./types";
+import type { CaptainStyle, ChapterId, DexResearchRecord, PlayerState, VariantCollection, VoyageEventId } from "./types";
 
 const STORAGE_KEY = "banjjakbada-save-v1";
 const SAVE_SLOT_PREFIX = "banjjakbada-save-slot-";
 const SAVE_SLOT_COUNT = 3;
 const COOKIE_MAX_CHUNKS = 10;
 const LOCAL_SAVE_ENDPOINT = "/api/local-save";
+const chapterIds: ChapterId[] = ["starwhale-expedition", "deep-crown-survey"];
 
 export type SaveSlotSummary = {
   slotId: number;
@@ -34,10 +35,12 @@ export const defaultCaptain: CaptainStyle = {
 };
 
 export const createInitialState = (): PlayerState => ({
-  saveVersion: 6,
+  saveVersion: 7,
   shells: 35,
   level: 1,
   xp: 0,
+  chapterProgress: defaultChapterProgress(),
+  voyageEventHistory: defaultVoyageEventHistory(),
   collection: {},
   researchProgress: {},
   variantCollection: {},
@@ -78,7 +81,7 @@ export function saveGame(state: PlayerState): void {
     return;
   }
 
-  const stored = { ...state, saveVersion: 6 };
+  const stored = { ...state, saveVersion: 7 };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   writeServerBackup(STORAGE_KEY, stored);
 }
@@ -122,7 +125,7 @@ export function saveGameToSlot(slotId: number, state: PlayerState): void {
   }
 
   const key = slotKey(slotId);
-  const stored = { ...state, saveVersion: 6, savedAt: new Date().toISOString() };
+  const stored = { ...state, saveVersion: 7, savedAt: new Date().toISOString() };
   localStorage.setItem(key, JSON.stringify(stored));
   writeServerBackup(key, stored);
 }
@@ -201,7 +204,10 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   return {
     ...initial,
     ...parsed,
-    saveVersion: 6,
+    saveVersion: 7,
+    activeChapterId: parsed.activeChapterId,
+    chapterProgress: normalizeChapterProgress(parsed.chapterProgress),
+    voyageEventHistory: normalizeVoyageEventHistory(parsed.voyageEventHistory),
     collection,
     researchProgress: normalizeResearchProgress(parsed.researchProgress, collection),
     variantCollection: normalizeVariantCollection(parsed.variantCollection),
@@ -262,7 +268,8 @@ function parseStoredState(raw: string | null): StoredPlayerState | undefined {
       parsed.saveVersion !== 3 &&
       parsed.saveVersion !== 4 &&
       parsed.saveVersion !== 5 &&
-      parsed.saveVersion !== 6
+      parsed.saveVersion !== 6 &&
+      parsed.saveVersion !== 7
     ) {
       return undefined;
     }
@@ -313,6 +320,8 @@ function progressScore(value: StoredPlayerState | undefined): number {
     variantCount * 80 +
     (value.companions?.length ?? 0) * 35 +
     Object.values(value.affinity ?? {}).reduce((sum, affinity) => sum + Math.max(0, affinity ?? 0), 0) * 2 +
+    Object.values(value.voyageEventHistory ?? {}).reduce((sum, record) => sum + (record?.successes ?? 0) * 180 + (record?.attempts ?? 0) * 20, 0) +
+    Object.values(value.chapterProgress ?? {}).reduce((sum, record) => sum + (record?.score ?? 0), 0) +
     (value.discoveredAreaIds?.length ?? 0) * 120 +
     (value.ownedItemIds?.length ?? 0) * 20 +
     (value.unlockedAreaIds?.length ?? 0) * 20 +
@@ -371,6 +380,51 @@ function normalizeVariantCollection(
       return [fishId, normalizedVariants];
     }),
   );
+}
+
+function defaultChapterProgress(): PlayerState["chapterProgress"] {
+  return Object.fromEntries(
+    chapterIds.map((chapterId) => [chapterId, { started: false, completed: false, score: 0 }]),
+  ) as PlayerState["chapterProgress"];
+}
+
+function normalizeChapterProgress(
+  stored: Partial<PlayerState["chapterProgress"]> | undefined,
+): PlayerState["chapterProgress"] {
+  const defaults = defaultChapterProgress();
+  for (const chapterId of chapterIds) {
+    defaults[chapterId] = {
+      ...defaults[chapterId],
+      ...(stored?.[chapterId] ?? {}),
+      score: Math.max(0, Math.floor(stored?.[chapterId]?.score ?? defaults[chapterId].score)),
+    };
+  }
+  return defaults;
+}
+
+function defaultVoyageEventHistory(): PlayerState["voyageEventHistory"] {
+  return {
+    "current-breakthrough": { attempts: 0, successes: 0 },
+    "deep-shadow": { attempts: 0, successes: 0 },
+    "pirate-crab": { attempts: 0, successes: 0 },
+    "storm-spout": { attempts: 0, successes: 0 },
+    "reef-maze": { attempts: 0, successes: 0 },
+  };
+}
+
+function normalizeVoyageEventHistory(
+  stored: Partial<Record<VoyageEventId, { attempts?: number; successes?: number; lastOutcome?: "success" | "fail" }>> | undefined,
+): PlayerState["voyageEventHistory"] {
+  const defaults = defaultVoyageEventHistory();
+  for (const eventId of Object.keys(defaults) as VoyageEventId[]) {
+    const record = stored?.[eventId];
+    defaults[eventId] = {
+      attempts: Math.max(0, Math.floor(record?.attempts ?? 0)),
+      successes: Math.max(0, Math.floor(record?.successes ?? 0)),
+      lastOutcome: record?.lastOutcome,
+    };
+  }
+  return defaults;
 }
 
 function readLegacyCookieBackups(): Array<StoredPlayerState | undefined> {
