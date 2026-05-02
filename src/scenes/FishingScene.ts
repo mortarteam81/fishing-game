@@ -10,6 +10,7 @@ import { PALETTE, TEXT } from "../game/palette";
 import { loadGame, saveGame } from "../game/storage";
 import { itemIconTextureKey } from "../game/textureKeys";
 import { addHeader, addMuteButton, addOceanBackground, addTextButton } from "../game/ui";
+import { getAreaWeather, weatherEffectLabel } from "../game/weather";
 import type { CatchResult, FishingAttempt, PlayerState } from "../game/types";
 
 export class FishingScene extends Phaser.Scene {
@@ -44,20 +45,25 @@ export class FishingScene extends Phaser.Scene {
     this.state = loadGame();
     const area = getArea(this.areaId);
     const variant = area?.theme ?? "beach";
+    const weather = area ? getAreaWeather(area, this.state) : undefined;
     addOceanBackground(this, variant);
     addHeader(this, area?.name ?? "낚시터", this.state);
     addMuteButton(this);
 
     this.add
-      .text(480, 118, area?.flavor ?? "물결이 반짝이면 버튼을 눌러요.", {
+      .text(480, 112, area?.flavor ?? "물결이 반짝이면 버튼을 눌러요.", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "23px",
+        fontSize: "22px",
         fontStyle: "800",
         color: TEXT.primary,
         align: "center",
         wordWrap: { width: 760 },
       })
       .setOrigin(0.5);
+
+    if (weather) {
+      this.addWeatherBadge(weather.label, weather.description, weatherEffectLabel(weather), weather.tint);
+    }
 
     const loadingText = this.add
       .text(480, 330, "낚시 장비를 준비하는 중...", {
@@ -350,6 +356,35 @@ export class FishingScene extends Phaser.Scene {
     line.strokePath();
     line.fillStyle(PALETTE.butter, 0.85);
     line.fillCircle(374, 365, 8);
+  }
+
+  private addWeatherBadge(label: string, description: string, effect: string, tint: number) {
+    const badge = this.add.container(480, 160).setDepth(6);
+    badge.add(this.add.rectangle(0, 0, 560, 42, 0xffffff, 0.68).setStrokeStyle(3, PALETTE.ink, 0.55));
+    badge.add(this.add.circle(-250, 0, 13, tint, 0.95).setStrokeStyle(2, PALETTE.ink, 0.35));
+    badge.add(
+      this.add
+        .text(-226, -1, `${label} · ${effect}`, {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "16px",
+          fontStyle: "900",
+          color: TEXT.primary,
+          fixedWidth: 242,
+        })
+        .setOrigin(0, 0.5),
+    );
+    badge.add(
+      this.add
+        .text(38, 0, description, {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "14px",
+          fontStyle: "800",
+          color: TEXT.secondary,
+          fixedWidth: 220,
+          align: "right",
+        })
+        .setOrigin(0, 0.5),
+    );
   }
 
   private playCastEffects() {

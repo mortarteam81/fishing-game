@@ -5,9 +5,10 @@ import { fixedContentOffset, fixedScreenCenterX, sceneGameWidth } from "../game/
 import { ensureSvgTextures, fishTexturesForIds, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { playSoftTone } from "../game/audio";
-import { getBoatSpeed } from "../game/progression";
-import { loadGame } from "../game/storage";
+import { canDiscoverArea, discoverArea, getBoatSpeed, isAreaDiscovered } from "../game/progression";
+import { loadGame, saveGame } from "../game/storage";
 import { addMuteButton, addTextButton } from "../game/ui";
+import { getAreaWeather } from "../game/weather";
 import type { AreaDefinition, PlayerState } from "../game/types";
 
 type Hotspot = {
@@ -48,6 +49,14 @@ const hotspotLayout = [
   [2460, 1490],
   [1320, 1040],
   [2040, 1580],
+  [1730, 1240],
+  [1930, 1380],
+  [2190, 1210],
+  [2050, 1450],
+  [2410, 1360],
+  [420, 320],
+  [2320, 760],
+  [1110, 1660],
 ] as const;
 
 const hotspots: Hotspot[] = areas.map((area, index) => {
@@ -125,6 +134,7 @@ export class OceanScene extends Phaser.Scene {
   private targetMarker?: Phaser.GameObjects.Container;
   private miniBoat?: Phaser.GameObjects.Triangle;
   private statusText?: Phaser.GameObjects.Text;
+  private weatherText?: Phaser.GameObjects.Text;
   private compassNeedle?: Phaser.GameObjects.Triangle;
   private nearby?: Hotspot;
   private shimmerLayers: Phaser.GameObjects.Graphics[] = [];
@@ -268,15 +278,22 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private addMapObjects() {
-    for (const hotspot of hotspots) {
+    for (const hotspot of this.mapHotspots()) {
       const unlocked = this.state.unlockedAreaIds.includes(hotspot.area.id);
-      const object = this.add.image(hotspot.x, hotspot.y, hotspot.texture).setDepth(5).setAlpha(unlocked ? 1 : 0.48);
+      const discovered = isAreaDiscovered(this.state, hotspot.area);
+      const rumor = !discovered && canDiscoverArea(this.state, hotspot.area);
+      const weather = getAreaWeather(hotspot.area, this.state);
+      const object = this.add.image(hotspot.x, hotspot.y, hotspot.texture).setDepth(5).setAlpha(unlocked ? 1 : rumor ? 0.34 : 0.48);
+      if (rumor) {
+        object.setTint(weather.tint);
+      }
       const glow = this.add.image(hotspot.x, hotspot.y - 74, "sparkle-point").setDepth(6).setScale(0.9);
-      glow.setAlpha(unlocked ? 0.95 : 0.24);
+      glow.setAlpha(unlocked ? 0.95 : rumor ? 0.58 : 0.24);
+      glow.setTint(weather.tint);
       this.tweens.add({
         targets: glow,
-        scale: unlocked ? 1.15 : 0.92,
-        alpha: unlocked ? 0.45 : 0.18,
+        scale: unlocked ? 1.15 : rumor ? 1.05 : 0.92,
+        alpha: unlocked ? 0.45 : rumor ? 0.32 : 0.18,
         duration: 900,
         yoyo: true,
         repeat: -1,
@@ -284,12 +301,12 @@ export class OceanScene extends Phaser.Scene {
       });
 
       this.add
-        .text(hotspot.x, hotspot.y + 92, unlocked ? hotspot.label : `Lv.${hotspot.area.requiredLevel} 열림`, {
+        .text(hotspot.x, hotspot.y + 92, this.hotspotLabel(hotspot.area, unlocked, rumor), {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
           fontSize: "22px",
           fontStyle: "900",
-          color: unlocked ? TEXT.primary : TEXT.disabled,
-          backgroundColor: unlocked ? "rgba(255,255,255,0.68)" : "rgba(255,255,255,0.45)",
+          color: unlocked || rumor ? TEXT.primary : TEXT.disabled,
+          backgroundColor: unlocked || rumor ? "rgba(255,255,255,0.68)" : "rgba(255,255,255,0.45)",
           padding: { x: 12, y: 7 },
         })
         .setOrigin(0.5)
@@ -309,7 +326,7 @@ export class OceanScene extends Phaser.Scene {
     route.lineStyle(4, PALETTE.white, 0.26);
     route.beginPath();
     route.moveTo(230, 850);
-    for (const hotspot of hotspots) {
+    for (const hotspot of this.mapHotspots()) {
       route.lineTo(hotspot.x, hotspot.y - 92);
     }
     route.strokePath();
@@ -386,6 +403,15 @@ export class OceanScene extends Phaser.Scene {
 
     fixed.add(this.createCompass(190, 38));
     fixed.add(this.createMiniMap(824, 392));
+    this.weatherText = this.add
+      .text(322, 60, "날씨 소문을 확인하는 중", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "15px",
+        fontStyle: "800",
+        color: TEXT.secondary,
+      })
+      .setOrigin(0, 0.5);
+    fixed.add(this.weatherText);
 
     addTextButton(this, offset + 84, 500, "항구", () => this.scene.start("Harbor"), {
       width: 120,
@@ -430,13 +456,14 @@ export class OceanScene extends Phaser.Scene {
         .setOrigin(0, 0.5),
     );
 
-    for (const hotspot of hotspots) {
+    for (const hotspot of this.mapHotspots()) {
       const unlocked = this.state.unlockedAreaIds.includes(hotspot.area.id);
+      const rumor = !isAreaDiscovered(this.state, hotspot.area) && canDiscoverArea(this.state, hotspot.area);
       const dot = this.add.circle(
         -72 + (hotspot.x / WORLD_WIDTH) * 144,
         -28 + (hotspot.y / WORLD_HEIGHT) * 70,
-        unlocked ? 5 : 4,
-        unlocked ? PALETTE.butter : 0x91a4ad,
+        unlocked ? 5 : rumor ? 4.5 : 4,
+        unlocked ? PALETTE.butter : rumor ? getAreaWeather(hotspot.area, this.state).tint : 0x91a4ad,
         1,
       );
       dot.setStrokeStyle(2, PALETTE.ink, 0.35);
@@ -596,8 +623,8 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private updateNearbyPrompt() {
-    const unlocked = hotspots.filter((hotspot) => this.state.unlockedAreaIds.includes(hotspot.area.id));
-    const closest = unlocked.find((hotspot) => Phaser.Math.Distance.Between(this.boat.x, this.boat.y, hotspot.x, hotspot.y) < 170);
+    const available = this.mapHotspots().filter((hotspot) => this.state.unlockedAreaIds.includes(hotspot.area.id) || canDiscoverArea(this.state, hotspot.area));
+    const closest = available.find((hotspot) => Phaser.Math.Distance.Between(this.boat.x, this.boat.y, hotspot.x, hotspot.y) < 170);
     if (closest?.area.id === this.nearby?.area.id) {
       return;
     }
@@ -608,26 +635,38 @@ export class OceanScene extends Phaser.Scene {
 
     if (!closest) {
       this.statusText?.setText("반짝 포인트를 찾아요");
+      this.weatherText?.setText("숨은 항로는 이상한 물결 근처에서 드러나요");
       return;
     }
 
-    this.statusText?.setText(`${closest.area.name} 발견!`);
+    const wasDiscovered = isAreaDiscovered(this.state, closest.area);
+    if (!wasDiscovered && canDiscoverArea(this.state, closest.area)) {
+      this.state = discoverArea(this.state, closest.area.id);
+      saveGame(this.state);
+    }
+
+    const weather = getAreaWeather(closest.area, this.state);
+    const newlyDiscovered = !wasDiscovered && isAreaDiscovered(this.state, closest.area);
+    this.statusText?.setText(newlyDiscovered ? "숨은 항로 발견!" : `${closest.area.name} 발견!`);
+    this.weatherText?.setText(`${closest.area.name} · ${weather.label} · ${weather.description}`);
     playSoftTone(this, this.state, 640, 0.06);
     const panel = this.add.rectangle(0, 0, 438, 88, PALETTE.paper, 0.9).setStrokeStyle(4, PALETTE.ink);
     const text = this.add
-      .text(-200, -18, `${closest.area.name} 근처예요`, {
+      .text(-200, -18, newlyDiscovered ? closest.area.route?.revealText ?? `${closest.area.name} 발견!` : `${closest.area.name} 근처예요`, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "23px",
+        fontSize: newlyDiscovered ? "18px" : "23px",
         fontStyle: "900",
         color: TEXT.primary,
+        wordWrap: { width: 268 },
       })
       .setOrigin(0, 0.5);
     const hint = this.add
-      .text(-200, 20, "반짝 포인트에서 낚시해볼까요?", {
+      .text(-200, 24, `${weather.label} · 반짝 포인트에서 낚시해볼까요?`, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "17px",
+        fontSize: "16px",
         fontStyle: "800",
         color: TEXT.secondary,
+        wordWrap: { width: 284 },
       })
       .setOrigin(0, 0.5);
     const button = addTextButton(this, 140, 0, "낚시", () => this.scene.start("Fishing", { areaId: closest.area.id }), {
@@ -642,5 +681,19 @@ export class OceanScene extends Phaser.Scene {
     this.prompt.setSize(438, 88);
     this.prompt.setInteractive({ useHandCursor: true });
     this.prompt.on("pointerdown", () => this.scene.start("Fishing", { areaId: closest.area.id }));
+  }
+
+  private mapHotspots(): Hotspot[] {
+    return hotspots.filter((hotspot) => isAreaDiscovered(this.state, hotspot.area) || canDiscoverArea(this.state, hotspot.area));
+  }
+
+  private hotspotLabel(area: AreaDefinition, unlocked: boolean, rumor: boolean): string {
+    if (unlocked) {
+      return area.name;
+    }
+    if (rumor) {
+      return "수상한 물결";
+    }
+    return `Lv.${area.requiredLevel} 열림`;
   }
 }

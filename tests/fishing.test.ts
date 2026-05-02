@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { startFishing, resolveTiming } from "../src/game/fishing";
 import { getFish } from "../src/game/content";
 import { createInitialState } from "../src/game/storage";
+import { weatherDefinitions } from "../src/game/weather";
 import type { FishingAttempt } from "../src/game/types";
 
 describe("fishing loop", () => {
@@ -10,6 +11,7 @@ describe("fishing loop", () => {
 
     expect(attempt.areaId).toBe("sunny-beach");
     expect(attempt.fish.areaIds).toContain("sunny-beach");
+    expect(attempt.weather.label).toBeTruthy();
     expect(attempt.targetWidth).toBeGreaterThan(0);
   });
 
@@ -55,6 +57,7 @@ describe("fishing loop", () => {
     const attempt: FishingAttempt = {
       areaId: "aurora-crown",
       fish: ancientFriend!,
+      weather: weatherDefinitions.clear,
       biteDelayMs: 500,
       targetCenter: 0.5,
       targetWidth: 0.3,

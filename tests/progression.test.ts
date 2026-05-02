@@ -3,6 +3,8 @@ import {
   applyStoryChoice,
   buyItem,
   claimQuest,
+  canDiscoverArea,
+  discoverArea,
   getAvailableStoryChoices,
   getBoatSpeed,
   getLureSpeed,
@@ -11,7 +13,9 @@ import {
   recordCatch,
   refreshQuestCompletion,
   stepProgress,
+  unlockAreasForLevel,
 } from "../src/game/progression";
+import { getArea } from "../src/game/content";
 import { createInitialState } from "../src/game/storage";
 
 describe("progression", () => {
@@ -46,6 +50,20 @@ describe("progression", () => {
 
     expect(stepProgress(state, { kind: "collectUnique", count: 1 })).toBe(0);
     expect(stepProgress(state, { kind: "collectVariants", count: 1 })).toBe(1);
+  });
+
+  it("keeps hidden routes out of automatic level unlocks until discovered", () => {
+    const leveled = unlockAreasForLevel({ ...createInitialState(), level: 60 });
+
+    expect(leveled.unlockedAreaIds).not.toContain("fog-whale-route");
+
+    const hiddenArea = getArea("fog-whale-route");
+    expect(hiddenArea).toBeTruthy();
+    expect(canDiscoverArea(leveled, hiddenArea!)).toBe(true);
+
+    const discovered = discoverArea(leveled, "fog-whale-route");
+    expect(discovered.discoveredAreaIds).toContain("fog-whale-route");
+    expect(discovered.unlockedAreaIds).toContain("fog-whale-route");
   });
 
   it("unlocks the first quest reward after any catch", () => {

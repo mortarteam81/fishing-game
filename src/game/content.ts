@@ -638,7 +638,79 @@ const legendAreas: AreaDefinition[] = legendAreasBlueprints.map((area) => ({
   flavor: area.flavor,
 }));
 
-export const areas: AreaDefinition[] = [...baseAreas, ...generatedAreas, ...legendAreas];
+const hiddenAreas: AreaDefinition[] = [
+  {
+    id: "fog-whale-route",
+    name: "안개 고래길",
+    requiredLevel: 31,
+    fishIds: [
+      "misty-fjord-drifter",
+      "misty-fjord-lantern-eel",
+      "moonlit-current-skywhale",
+      "rainbow-whale",
+      "glass-trench-velvet-turtle",
+    ],
+    backgroundKey: "bg-fog-whale-route",
+    theme: "mist",
+    mapTexture: "map-fog-whale-route",
+    flavor: "안개가 내려앉을 때만 고래의 숨결처럼 흐릿한 물길이 보여요.",
+    hidden: true,
+    weatherPool: ["fog", "moonTide", "rain"],
+    route: {
+      discoveryLevel: 31,
+      discoveryHint: "은빛 안개 사이로 커다란 물결이 들려와요.",
+      revealText: "안개가 걷히며 고래들이 지나가는 숨은 항로가 기록됐어요.",
+    },
+  },
+  {
+    id: "storm-wreck-reef",
+    name: "폭풍 난파초",
+    requiredLevel: 43,
+    fishIds: [
+      "storm-bank-veil-ray",
+      "storm-bank-lantern-eel",
+      "basalt-cove-crown-clam",
+      "tempest-pass-veil-ray",
+      "tempest-pass-crown-clam",
+    ],
+    backgroundKey: "bg-storm-wreck-reef",
+    theme: "storm",
+    mapTexture: "map-storm-wreck-reef",
+    flavor: "부서진 난파선 주변으로 강한 물살과 희귀한 소문이 모여요.",
+    hidden: true,
+    weatherPool: ["storm", "rain", "fog"],
+    route: {
+      discoveryLevel: 43,
+      discoveryHint: "먹구름 아래에서 오래된 닻소리가 들려요.",
+      revealText: "번개가 바다 위를 비추자 난파초의 숨은 길이 드러났어요.",
+    },
+  },
+  {
+    id: "aurora-secret-atoll",
+    name: "극광 비밀환초",
+    requiredLevel: 58,
+    fishIds: [
+      "aurora-reef-skywhale",
+      "aurora-reef-mythic-nudibranch",
+      "starlit-offshore-lantern-eel",
+      "temporal-garden-skywhale",
+      "aurora-crown-mythic-nudibranch",
+    ],
+    backgroundKey: "bg-aurora-secret-atoll",
+    theme: "aurora",
+    mapTexture: "map-aurora-secret-atoll",
+    flavor: "오로라가 수면에 왕관처럼 내려앉는 밤, 비밀 환초가 모습을 드러내요.",
+    hidden: true,
+    weatherPool: ["aurora", "moonTide", "fog"],
+    route: {
+      discoveryLevel: 58,
+      discoveryHint: "오로라빛 파문이 지도 바깥에서 반짝여요.",
+      revealText: "극광이 항로를 그리며 비밀 환초의 위치를 알려줬어요.",
+    },
+  },
+];
+
+export const areas: AreaDefinition[] = [...baseAreas, ...generatedAreas, ...legendAreas, ...hiddenAreas];
 
 const baseItems: ItemDefinition[] = [
   {

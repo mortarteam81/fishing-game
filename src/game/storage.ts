@@ -33,18 +33,19 @@ export const defaultCaptain: CaptainStyle = {
 };
 
 export const createInitialState = (): PlayerState => ({
-  saveVersion: 4,
+  saveVersion: 5,
   shells: 35,
   level: 1,
   xp: 0,
   collection: {},
   researchProgress: {},
   variantCollection: {},
+  discoveredAreaIds: [],
   captain: defaultCaptain,
   equippedRodId: "twig-rod",
   equippedBoatId: "harbor-skiff",
   ownedItemIds: ["twig-rod", "harbor-skiff"],
-  unlockedAreaIds: areas.filter((area) => area.requiredLevel <= 1).map((area) => area.id),
+  unlockedAreaIds: areas.filter((area) => !area.hidden && area.requiredLevel <= 1).map((area) => area.id),
   questProgress: Object.fromEntries(
     quests.map((quest) => [quest.id, { completed: false, claimed: false }]),
   ),
@@ -73,7 +74,7 @@ export function saveGame(state: PlayerState): void {
     return;
   }
 
-  const stored = { ...state, saveVersion: 4 };
+  const stored = { ...state, saveVersion: 5 };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   writeServerBackup(STORAGE_KEY, stored);
 }
@@ -117,7 +118,7 @@ export function saveGameToSlot(slotId: number, state: PlayerState): void {
   }
 
   const key = slotKey(slotId);
-  const stored = { ...state, saveVersion: 3, savedAt: new Date().toISOString() };
+  const stored = { ...state, saveVersion: 5, savedAt: new Date().toISOString() };
   localStorage.setItem(key, JSON.stringify(stored));
   writeServerBackup(key, stored);
 }
@@ -188,15 +189,16 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   const level = parsed.level ?? initial.level;
   const collection = { ...initial.collection, ...(parsed.collection ?? {}) };
   const levelUnlockedAreaIds = areas
-    .filter((area) => area.requiredLevel <= level)
+    .filter((area) => !area.hidden && area.requiredLevel <= level)
     .map((area) => area.id);
   return {
     ...initial,
     ...parsed,
-    saveVersion: 4,
+    saveVersion: 5,
     collection,
     researchProgress: normalizeResearchProgress(parsed.researchProgress, collection),
     variantCollection: normalizeVariantCollection(parsed.variantCollection),
+    discoveredAreaIds: Array.from(new Set([...(parsed.discoveredAreaIds ?? [])])),
     captain: {
       ...initial.captain,
       ...(parsed.captain ?? {}),
@@ -244,7 +246,13 @@ function parseStoredState(raw: string | null): StoredPlayerState | undefined {
 
   try {
     const parsed = JSON.parse(raw) as StoredPlayerState;
-    if (parsed.saveVersion !== 1 && parsed.saveVersion !== 2 && parsed.saveVersion !== 3 && parsed.saveVersion !== 4) {
+    if (
+      parsed.saveVersion !== 1 &&
+      parsed.saveVersion !== 2 &&
+      parsed.saveVersion !== 3 &&
+      parsed.saveVersion !== 4 &&
+      parsed.saveVersion !== 5
+    ) {
       return undefined;
     }
     return parsed;
@@ -292,6 +300,7 @@ function progressScore(value: StoredPlayerState | undefined): number {
     collectionCount * 50 +
     researchPoints * 12 +
     variantCount * 80 +
+    (value.discoveredAreaIds?.length ?? 0) * 120 +
     (value.ownedItemIds?.length ?? 0) * 20 +
     (value.unlockedAreaIds?.length ?? 0) * 20 +
     (value.shells ?? 0)

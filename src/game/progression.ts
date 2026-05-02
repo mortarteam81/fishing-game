@@ -6,6 +6,7 @@ import {
   seedResearchRecord,
 } from "./research";
 import type {
+  AreaDefinition,
   CatchMutationId,
   CatchQuality,
   FishDefinition,
@@ -42,12 +43,41 @@ export function addXp(state: PlayerState, xp: number): PlayerState {
 
 export function unlockAreasForLevel(state: PlayerState): PlayerState {
   const earned = areas
-    .filter((area) => area.requiredLevel <= state.level)
+    .filter((area) => !area.hidden && area.requiredLevel <= state.level)
     .map((area) => area.id);
 
   return {
     ...state,
     unlockedAreaIds: Array.from(new Set([...state.unlockedAreaIds, ...earned])),
+  };
+}
+
+export function isAreaDiscovered(state: PlayerState, area: AreaDefinition): boolean {
+  return !area.hidden || state.discoveredAreaIds.includes(area.id);
+}
+
+export function canDiscoverArea(state: PlayerState, area: AreaDefinition): boolean {
+  if (!area.hidden || state.discoveredAreaIds.includes(area.id)) {
+    return false;
+  }
+
+  const route = area.route;
+  return Boolean(route && state.level >= route.discoveryLevel && requirementsMet(state, route.requirements));
+}
+
+export function discoverArea(state: PlayerState, areaId: string): PlayerState {
+  const area = areas.find((entry) => entry.id === areaId);
+  if (!area || !canDiscoverArea(state, area)) {
+    return state;
+  }
+
+  return {
+    ...state,
+    discoveredAreaIds: Array.from(new Set([...state.discoveredAreaIds, area.id])),
+    unlockedAreaIds:
+      state.level >= area.requiredLevel
+        ? Array.from(new Set([...state.unlockedAreaIds, area.id]))
+        : state.unlockedAreaIds,
   };
 }
 
@@ -321,6 +351,10 @@ export function conditionMet(state: PlayerState, condition: StoryCondition): boo
       return (state.storyFlags[condition.flag] ?? false) === (condition.value ?? true);
     case "notStoryFlag":
       return !state.storyFlags[condition.flag];
+    case "researchRank":
+      return getResearchRank(state.researchProgress[condition.fishId]?.points ?? 0) >= condition.rank;
+    case "collectedVariants":
+      return countCollectedVariants(state.variantCollection) >= condition.count;
   }
 }
 

@@ -160,12 +160,13 @@ describe("save slots", () => {
 
     const loaded = loadGame();
 
-    expect(loaded.saveVersion).toBe(4);
+    expect(loaded.saveVersion).toBe(5);
     expect(loaded.collection["sunny-minnow"]).toBe(4);
     expect(typeof loaded.collection["sunny-minnow"]).toBe("number");
     expect(loaded.researchProgress["sunny-minnow"].catches).toBe(4);
     expect(loaded.researchProgress["sunny-minnow"].points).toBeGreaterThan(0);
     expect(loaded.variantCollection).toEqual({});
+    expect(loaded.discoveredAreaIds).toEqual([]);
   });
 
   it("round-trips variants through main save and save slots", () => {

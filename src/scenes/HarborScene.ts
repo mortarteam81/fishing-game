@@ -6,6 +6,7 @@ import { PALETTE, TEXT } from "../game/palette";
 import {
   applyStoryChoice,
   getAvailableStoryChoices,
+  isAreaDiscovered,
   nextQuestHint,
   refreshQuestCompletion,
 } from "../game/progression";
@@ -104,12 +105,13 @@ export class HarborScene extends Phaser.Scene {
       iconScale: 0.5,
     });
 
+    const knownAreas = areas.filter((area) => isAreaDiscovered(this.state, area));
     const farthestUnlocked = Math.max(
       0,
-      ...areas.map((area, index) => (this.state.unlockedAreaIds.includes(area.id) ? index : -1)),
+      ...knownAreas.map((area, index) => (this.state.unlockedAreaIds.includes(area.id) ? index : -1)),
     );
-    const startIndex = Phaser.Math.Clamp(farthestUnlocked - 1, 0, Math.max(0, areas.length - 4));
-    const voyageAreas = areas.slice(startIndex, startIndex + 4);
+    const startIndex = Phaser.Math.Clamp(farthestUnlocked - 1, 0, Math.max(0, knownAreas.length - 4));
+    const voyageAreas = knownAreas.slice(startIndex, startIndex + 4);
 
     voyageAreas.forEach((area, index) => {
       const unlocked = this.state.unlockedAreaIds.includes(area.id);

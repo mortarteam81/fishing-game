@@ -1,6 +1,7 @@
 import { areas, fish } from "./content";
 import { getFishAffinityBoost, getLureSpeed, getMutationChance, getRareBoost, getRodEase } from "./progression";
 import { previewResearchCatch } from "./research";
+import { getAreaWeather } from "./weather";
 import type {
   CatchMutation,
   CatchQuality,
@@ -32,7 +33,8 @@ const rarityRank: Record<FishDefinition["rarity"], number> = {
 
 export function startFishing(areaId: string, state: PlayerState, random = Math.random): FishingAttempt {
   const area = areas.find((entry) => entry.id === areaId) ?? areas[0];
-  const rareBoost = getRareBoost(state);
+  const weather = getAreaWeather(area, state);
+  const rareBoost = getRareBoost(state) + (weather.effect?.rareBoost ?? 0);
   const candidates = fish.filter((entry) => area.fishIds.includes(entry.id));
   const weighted = candidates.map((entry) => {
     const broadBoost = rarityRank[entry.rarity] >= rarityRank.rare ? rareBoost : 0;
@@ -52,9 +54,10 @@ export function startFishing(areaId: string, state: PlayerState, random = Math.r
   return {
     areaId,
     fish: chosen,
-    biteDelayMs: Math.max(360, Math.round((750 + Math.floor(random() * 900)) * (1 - getLureSpeed(state)))),
+    weather,
+    biteDelayMs: Math.max(360, Math.round((750 + Math.floor(random() * 900)) * (1 - getLureSpeed(state) - (weather.effect?.lureSpeed ?? 0)))),
     targetCenter: 0.5,
-    targetWidth: Math.min(0.54, 0.24 + getRodEase(state)),
+    targetWidth: Math.max(0.18, Math.min(0.54, 0.24 + getRodEase(state) + (weather.effect?.catchEase ?? 0))),
   };
 }
 
@@ -83,7 +86,7 @@ export function resolveTiming(
   const quality = qualityFromDistance(distance, width);
   const multiplier = quality === "sparkle" ? 1.7 : quality === "great" ? 1.35 : 1;
   const rarity = rarityMultiplier[attempt.fish.rarity];
-  const mutation = rollMutation(quality, attempt.fish, state, random);
+  const mutation = rollMutation(quality, attempt.fish, state, attempt.weather.effect?.mutationChance ?? 0, random);
   const mutationValue = mutation?.valueMultiplier ?? 1;
   const mutationXp = mutation?.xpMultiplier ?? 1;
   const research = previewResearchCatch(state, attempt.fish, quality, mutation?.id);
@@ -111,13 +114,14 @@ function rollMutation(
   quality: CatchQuality,
   fish: FishDefinition,
   state: PlayerState,
+  weatherChance: number,
   random: () => number,
 ): CatchMutation | undefined {
   const qualityChance = quality === "sparkle" ? 0.24 : quality === "great" ? 0.13 : 0.06;
   const rarityChance = Math.max(0, rarityRank[fish.rarity] - rarityRank.uncommon) * 0.024;
   const branchChance = state.storyFlags["coral-guardian"] ? 0.04 : 0;
   const gearChance = getMutationChance(state);
-  const chance = Math.min(0.56, qualityChance + rarityChance + getRareBoost(state) * 0.16 + branchChance + gearChance);
+  const chance = Math.min(0.56, qualityChance + rarityChance + getRareBoost(state) * 0.16 + branchChance + gearChance + weatherChance);
 
   if (random() > chance) {
     return undefined;

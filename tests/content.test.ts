@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { areas, fish, items, quests, storyChoices } from "../src/game/content";
+import { weatherDefinitions } from "../src/game/weather";
 
 describe("content data", () => {
   it("keeps catchable sea creatures wired to valid areas", () => {
@@ -7,11 +8,19 @@ describe("content data", () => {
     const areaIds = new Set(areas.map((entry) => entry.id));
 
     expect(fish).toHaveLength(129);
-    expect(areas).toHaveLength(18);
+    expect(areas).toHaveLength(21);
     expect(fishIds.size).toBe(fish.length);
 
     for (const area of areas) {
       expect(area.fishIds.length).toBeGreaterThan(0);
+      if (area.hidden) {
+        expect(area.route?.discoveryLevel).toBeGreaterThan(0);
+        expect(area.route?.discoveryHint).toBeTruthy();
+        expect(area.route?.revealText).toBeTruthy();
+      }
+      for (const weatherId of area.weatherPool ?? []) {
+        expect(weatherDefinitions[weatherId]).toBeTruthy();
+      }
       for (const fishId of area.fishIds) {
         expect(fishIds.has(fishId)).toBe(true);
       }

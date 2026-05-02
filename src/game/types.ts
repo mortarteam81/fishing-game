@@ -56,6 +56,21 @@ export type AreaTheme =
   | "trench"
   | "aurora";
 
+export type WeatherKind = "clear" | "fog" | "rain" | "storm" | "moonTide" | "aurora";
+
+export type WeatherDefinition = {
+  id: WeatherKind;
+  label: string;
+  description: string;
+  tint: number;
+  effect?: {
+    catchEase?: number;
+    lureSpeed?: number;
+    rareBoost?: number;
+    mutationChance?: number;
+  };
+};
+
 export type CaptainStyle = {
   presetId: string;
   name: string;
@@ -78,6 +93,15 @@ export type StoryCondition =
   | {
       kind: "notStoryFlag";
       flag: string;
+    }
+  | {
+      kind: "researchRank";
+      fishId: string;
+      rank: number;
+    }
+  | {
+      kind: "collectedVariants";
+      count: number;
     };
 
 export type StoryRewards = {
@@ -130,6 +154,14 @@ export type AreaDefinition = {
   theme: AreaTheme;
   mapTexture: string;
   flavor: string;
+  hidden?: boolean;
+  weatherPool?: WeatherKind[];
+  route?: {
+    discoveryLevel: number;
+    discoveryHint: string;
+    revealText: string;
+    requirements?: StoryCondition[];
+  };
 };
 
 export type ItemDefinition = {
@@ -224,13 +256,14 @@ export type QuestProgress = {
 };
 
 export type PlayerState = {
-  saveVersion: 4;
+  saveVersion: 5;
   shells: number;
   level: number;
   xp: number;
   collection: Record<string, number>;
   researchProgress: Record<string, DexResearchRecord>;
   variantCollection: Record<string, VariantCollection>;
+  discoveredAreaIds: string[];
   captain: CaptainStyle;
   equippedRodId: string;
   equippedBaitId?: string;
@@ -247,6 +280,7 @@ export type PlayerState = {
 export type FishingAttempt = {
   areaId: string;
   fish: FishDefinition;
+  weather: WeatherDefinition;
   biteDelayMs: number;
   targetCenter: number;
   targetWidth: number;
