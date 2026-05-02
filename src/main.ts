@@ -10,6 +10,7 @@ import { HarborScene } from "./scenes/HarborScene";
 import { OceanScene } from "./scenes/OceanScene";
 import { QuestScene } from "./scenes/QuestScene";
 import { SaveScene } from "./scenes/SaveScene";
+import { getAdaptiveGameSize } from "./game/layout";
 import { hydrateGameBackup } from "./game/storage";
 
 function syncViewportHeight() {
@@ -20,7 +21,14 @@ function syncViewportHeight() {
 function installMobileViewportFixes(game: Phaser.Game) {
   const refreshScale = () => {
     syncViewportHeight();
-    window.setTimeout(() => game.scale.refresh(), 80);
+    const size = getAdaptiveGameSize();
+    window.setTimeout(() => {
+      if (game.scale.gameSize.width !== size.width || game.scale.gameSize.height !== size.height) {
+        game.scale.setGameSize(size.width, size.height);
+      } else {
+        game.scale.refresh();
+      }
+    }, 80);
   };
 
   syncViewportHeight();
@@ -43,6 +51,7 @@ function startGame() {
     return;
   }
 
+  const gameSize = getAdaptiveGameSize();
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
@@ -50,8 +59,8 @@ function startGame() {
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
-      width: 960,
-      height: 540,
+      width: gameSize.width,
+      height: gameSize.height,
     },
     input: {
       activePointers: 2,

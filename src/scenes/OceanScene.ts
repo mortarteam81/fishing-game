@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { addPlayerBoat, boatWakeTint } from "../game/boat";
 import { areas, fish } from "../game/content";
+import { fixedContentOffset, fixedScreenCenterX, sceneGameWidth } from "../game/layout";
 import { ensureSvgTextures, fishTexturesForIds, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { playSoftTone } from "../game/audio";
@@ -138,9 +139,10 @@ export class OceanScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setZoom(1);
 
-    const loadingBg = this.add.rectangle(480, 270, 960, 540, 0xb3edf2, 1).setScrollFactor(0).setDepth(90);
+    const screenCenterX = fixedScreenCenterX(this);
+    const loadingBg = this.add.rectangle(screenCenterX, 270, sceneGameWidth(this), 540, 0xb3edf2, 1).setScrollFactor(0).setDepth(90);
     const loadingText = this.add
-      .text(480, 270, "바다 지도를 펼치는 중...", {
+      .text(screenCenterX, 270, "바다 지도를 펼치는 중...", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "24px",
         fontStyle: "900",
@@ -344,7 +346,8 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private addHud() {
-    const fixed = this.add.container(0, 0).setScrollFactor(0).setDepth(50);
+    const offset = fixedContentOffset(this);
+    const fixed = this.add.container(offset, 0).setScrollFactor(0).setDepth(50);
     fixed.add(
       this.add
         .rectangle(480, 38, 900, 62, 0xffffff, 0.72)
@@ -384,7 +387,7 @@ export class OceanScene extends Phaser.Scene {
     fixed.add(this.createCompass(190, 38));
     fixed.add(this.createMiniMap(824, 392));
 
-    addTextButton(this, 84, 500, "항구", () => this.scene.start("Harbor"), {
+    addTextButton(this, offset + 84, 500, "항구", () => this.scene.start("Harbor"), {
       width: 120,
       height: 44,
       fontSize: 18,
@@ -392,7 +395,7 @@ export class OceanScene extends Phaser.Scene {
       iconKey: "icon-harbor",
       iconScale: 0.34,
     }).setScrollFactor(0).setDepth(60);
-    addMuteButton(this, 880, 500).setScrollFactor(0).setDepth(60);
+    addMuteButton(this, offset + 880, 500).setScrollFactor(0).setDepth(60);
   }
 
   private createCompass(x: number, y: number) {
@@ -455,7 +458,7 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private addTouchControls() {
-    const controls = this.add.container(250, 448).setScrollFactor(0).setDepth(62).setAlpha(0.72);
+    const controls = this.add.container(fixedContentOffset(this) + 250, 448).setScrollFactor(0).setDepth(62).setAlpha(0.72);
     controls.add(this.add.circle(0, 0, 58, PALETTE.paper, 0.52).setStrokeStyle(3, PALETTE.ink, 0.45));
     const controlsText = this.add
       .text(0, 0, "터치\n항해", {
@@ -635,7 +638,7 @@ export class OceanScene extends Phaser.Scene {
       iconKey: "icon-rod",
       iconScale: 0.3,
     });
-    this.prompt = this.add.container(480, 112, [panel, text, hint, button]).setScrollFactor(0).setDepth(70);
+    this.prompt = this.add.container(fixedContentOffset(this) + 480, 112, [panel, text, hint, button]).setScrollFactor(0).setDepth(70);
     this.prompt.setSize(438, 88);
     this.prompt.setInteractive({ useHandCursor: true });
     this.prompt.on("pointerdown", () => this.scene.start("Fishing", { areaId: closest.area.id }));

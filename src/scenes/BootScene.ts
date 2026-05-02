@@ -24,7 +24,7 @@ export class BootScene extends Phaser.Scene {
     this.createOceanTextures();
     this.createUiIcons();
     this.add
-      .text(480, 270, "바다 장비를 준비하는 중...", {
+      .text(this.scale.width / 2, 270, "바다 장비를 준비하는 중...", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "26px",
         fontStyle: "900",

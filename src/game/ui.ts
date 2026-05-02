@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { applyFixedViewport, BASE_GAME_WIDTH, fixedViewportLeft, fixedViewportRight, fixedViewportWidth } from "./layout";
 import { PALETTE, TEXT } from "./palette";
 import { loadGame, saveGame } from "./storage";
 import type { AreaTheme, PlayerState } from "./types";
@@ -98,6 +99,7 @@ export function addPanel(
 }
 
 export function addHeader(scene: Phaser.Scene, title: string, state: PlayerState): void {
+  applyFixedViewport(scene);
   scene.add
     .text(32, 26, title, {
       fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
@@ -162,20 +164,25 @@ const backgroundPalettes: Record<OceanBackgroundVariant, {
 };
 
 export function addOceanBackground(scene: Phaser.Scene, variant: OceanBackgroundVariant): void {
+  applyFixedViewport(scene);
   const pal = backgroundPalettes[variant];
+  const left = fixedViewportLeft(scene);
+  const right = fixedViewportRight(scene);
+  const width = fixedViewportWidth(scene);
+  const centerX = BASE_GAME_WIDTH / 2;
   const g = scene.add.graphics();
 
   // === 空 SKY — clean gradient ===
   g.fillGradientStyle(pal.top, pal.top, pal.mid, pal.mid, 1);
-  g.fillRect(0, 0, 960, 298);
+  g.fillRect(left, 0, width, 298);
 
   // === 水平線 HORIZON — thin ink line ===
   g.lineStyle(2, PALETTE.ink, 0.10);
-  g.lineBetween(0, 298, 960, 298);
+  g.lineBetween(left, 298, right, 298);
 
   // === 海 SEA — deep colour fill ===
   g.fillStyle(pal.bottom, 1);
-  g.fillRect(0, 298, 960, 242);
+  g.fillRect(left, 298, width, 242);
 
   // === 日 / 月  SUN or MOON — bold circle ===
   g.fillStyle(pal.sun, 1);
@@ -187,13 +194,13 @@ export function addOceanBackground(scene: Phaser.Scene, variant: OceanBackground
   drawJapaneseLandmarks(g, variant, pal.accent);
 
   // === 波動 ANIMATED WAVES — scrolling parallax ===
-  addAnimatedWaves(scene, variant);
+  addAnimatedWaves(scene, variant, left, right);
 
   // === 泡 BUBBLES — floating particle system ===
-  addBubbles(scene);
+  addBubbles(scene, centerX, width);
 }
 
-function addAnimatedWaves(scene: Phaser.Scene, variant: OceanBackgroundVariant): void {
+function addAnimatedWaves(scene: Phaser.Scene, variant: OceanBackgroundVariant, left: number, right: number): void {
   const darkVariants = new Set(["moon", "trench", "aurora", "storm", "basalt"]);
   const baseAlpha = darkVariants.has(variant) ? 0.72 : 0.60;
 
@@ -218,7 +225,7 @@ function addAnimatedWaves(scene: Phaser.Scene, variant: OceanBackgroundVariant):
 
       waveLayer.lineStyle(lw, PALETTE.white, alpha);
       waveLayer.beginPath();
-      for (let x = -offsets[i]; x < 960 + waveW; x += waveW) {
+      for (let x = left - waveW - offsets[i]; x < right + waveW; x += waveW) {
         const cx = x + waveW / 2;
         waveLayer.arc(cx, y + waveR, waveR, Math.PI, 0, true);
       }
@@ -227,7 +234,7 @@ function addAnimatedWaves(scene: Phaser.Scene, variant: OceanBackgroundVariant):
       if (foam) {
         waveLayer.fillStyle(PALETTE.white, alpha + 0.14);
         const tipW = 7;
-        for (let x = -offsets[i]; x < 960 + waveW; x += waveW) {
+        for (let x = left - waveW - offsets[i]; x < right + waveW; x += waveW) {
           const cx = x + waveW / 2;
           waveLayer.fillTriangle(cx - waveR - tipW, y, cx - waveR, y - 9, cx - waveR + tipW, y);
           waveLayer.fillTriangle(cx + waveR - tipW, y, cx + waveR, y - 9, cx + waveR + tipW, y);
@@ -240,7 +247,7 @@ function addAnimatedWaves(scene: Phaser.Scene, variant: OceanBackgroundVariant):
   scene.events.once("shutdown", () => scene.events.off("update", redraw));
 }
 
-function addBubbles(scene: Phaser.Scene): void {
+function addBubbles(scene: Phaser.Scene, centerX: number, width: number): void {
   const KEY = "__bubble__";
   if (!scene.textures.exists(KEY)) {
     const bg = scene.make.graphics({}, false);
@@ -254,8 +261,8 @@ function addBubbles(scene: Phaser.Scene): void {
     bg.destroy();
   }
 
-  scene.add.particles(480, 520, KEY, {
-    x:        { min: -480, max: 480 },
+  scene.add.particles(centerX, 520, KEY, {
+    x:        { min: -width / 2, max: width / 2 },
     y:        { min: -200, max: 20 },
     speedY:   { min: -55,  max: -20 },
     speedX:   { min: -8,   max: 8   },

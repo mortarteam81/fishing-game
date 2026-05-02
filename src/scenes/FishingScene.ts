@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { addPlayerBoat } from "../game/boat";
 import { getArea } from "../game/content";
+import { playHaptic, stopHaptics } from "../game/haptics";
 import { playSoftTone } from "../game/audio";
 import { getReelPower, recordCatch, recordConsolation, refreshQuestCompletion } from "../game/progression";
 import { resolveTiming, startFishing } from "../game/fishing";
@@ -27,6 +28,7 @@ export class FishingScene extends Phaser.Scene {
   private score = 0;
   private reelProgress = 0.35;
   private reelTime = 0;
+  private lastReelHapticAt = 0;
   private targetWave = 0;
   private dynamicTargetCenter = 0.5;
 
@@ -131,7 +133,9 @@ export class FishingScene extends Phaser.Scene {
     this.direction = 1;
     this.reelProgress = 0.35;
     this.reelTime = 0;
+    this.lastReelHapticAt = 0;
     this.dynamicTargetCenter = this.attempt.targetCenter;
+    playHaptic("cast");
     playSoftTone(this, this.state, 440, 0.06);
     this.playCastEffects();
     this.waitingText = this.add
@@ -152,6 +156,7 @@ export class FishingScene extends Phaser.Scene {
     }
 
     this.waitingText?.destroy();
+    playHaptic("bite");
     playSoftTone(this, this.state, 660, 0.08);
     this.playBiteEffects();
 
@@ -181,11 +186,18 @@ export class FishingScene extends Phaser.Scene {
   }
 
   private beginReel() {
+    if (!this.meterActive || this.reeling) {
+      return;
+    }
+
     this.reeling = true;
+    this.lastReelHapticAt = 0;
+    playHaptic("reelStart");
   }
 
   private stopReel() {
     this.reeling = false;
+    stopHaptics();
   }
 
   private updateReelProgress(delta: number) {
@@ -201,6 +213,7 @@ export class FishingScene extends Phaser.Scene {
     if (this.reeling) {
       const reelPower = getReelPower(this.state);
       this.reelProgress += (inTarget ? (0.00028 + reelPower * 0.00055) * qualityBoost : -0.0002) * delta;
+      this.playReelHaptic(inTarget);
     } else {
       this.reelProgress -= 0.000035 * delta;
     }
@@ -273,6 +286,8 @@ export class FishingScene extends Phaser.Scene {
     }
 
     this.meterActive = false;
+    this.reeling = false;
+    stopHaptics();
     this.input.off("pointerdown", this.beginReel, this);
     this.input.off("pointerup", this.stopReel, this);
     this.input.keyboard?.off("keydown-SPACE", this.beginReel, this);
@@ -289,7 +304,19 @@ export class FishingScene extends Phaser.Scene {
     const refreshed = refreshQuestCompletion(next);
     saveGame(refreshed);
     this.playResultTone(result);
+    playHaptic(result.success ? "catch" : "miss");
     this.scene.start("CatchResult", { result, areaId: this.areaId });
+  }
+
+  private playReelHaptic(inTarget: boolean) {
+    const now = this.time.now;
+    const interval = inTarget ? 165 : 260;
+    if (now - this.lastReelHapticAt < interval) {
+      return;
+    }
+
+    this.lastReelHapticAt = now;
+    playHaptic(inTarget ? "reelGood" : "reelStrain");
   }
 
   private playResultTone(result: CatchResult) {
