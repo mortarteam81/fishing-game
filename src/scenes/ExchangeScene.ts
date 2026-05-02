@@ -1,8 +1,9 @@
 import Phaser from "phaser";
 import { items } from "../game/content";
+import { roleColorForItem, roleLabelsForItem } from "../game/gearRoles";
 import { ensureSvgTextures, itemPreviewTexture } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
-import { buyItem, canBuyItem, equipItem, refreshQuestCompletion } from "../game/progression";
+import { buyItem, canBuyItem, equipItem, getEquippedGearBuild, refreshQuestCompletion } from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
 import { boatMapTextureKey, itemIconTextureKey } from "../game/textureKeys";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
@@ -79,14 +80,7 @@ export class ExchangeScene extends Phaser.Scene {
     addHeader(this, "조개 교환소", this.state);
     addMuteButton(this);
 
-    this.add
-      .text(480, 68, "장비가 좋아질수록 낚시 감각과 배의 외형이 달라져요.", {
-        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "20px",
-        fontStyle: "800",
-        color: TEXT.primary,
-      })
-      .setOrigin(0.5);
+    this.addBuildSummary();
 
     this.addCategoryTabs();
     void this.addItemGrid();
@@ -117,6 +111,37 @@ export class ExchangeScene extends Phaser.Scene {
         },
       );
     });
+  }
+
+  private addBuildSummary() {
+    const build = getEquippedGearBuild(this.state);
+    const box = this.add.graphics();
+    box.fillStyle(0xffffff, 0.68);
+    box.fillRoundedRect(196, 50, 568, 36, 14);
+    box.lineStyle(2, PALETTE.ink, 0.42);
+    box.strokeRoundedRect(196, 50, 568, 36, 14);
+    box.fillStyle(roleColorForBuild(build.primaryRole), 0.95);
+    box.fillCircle(216, 68, 9);
+
+    this.add
+      .text(232, 67, `현재 세팅: ${build.label} · 시너지 ${build.synergyLevel}단계`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "16px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        fixedWidth: 252,
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(500, 67, build.description, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "13px",
+        fontStyle: "800",
+        color: TEXT.secondary,
+        fixedWidth: 244,
+        align: "right",
+      })
+      .setOrigin(0, 0.5);
   }
 
   private async addItemGrid() {
@@ -180,6 +205,7 @@ export class ExchangeScene extends Phaser.Scene {
     addPanel(this, x, y, 340, 100, owned ? PALETTE.paper : PALETTE.warmCream);
     const icon = this.add.image(x - 145, y + 8, this.itemIcon(item)).setScale(item.kind === "boat" ? 0.58 : 0.42);
     icon.setAlpha(owned ? 1 : 0.82);
+    this.addRoleBadge(item, x + 94, y - 33);
 
     this.add
       .text(x - 110, y - 34, item.name, {
@@ -187,7 +213,7 @@ export class ExchangeScene extends Phaser.Scene {
         fontSize: item.name.length > 11 ? "16px" : "19px",
         fontStyle: "900",
         color: TEXT.primary,
-        wordWrap: { width: 194 },
+        wordWrap: { width: 144 },
       })
       .setOrigin(0, 0.5);
     this.add
@@ -261,4 +287,36 @@ export class ExchangeScene extends Phaser.Scene {
     return parts.length > 0 ? parts.join(" · ") : "기본 장비";
   }
 
+  private addRoleBadge(item: ItemDefinition, x: number, y: number) {
+    const width = 104;
+    const badge = this.add.graphics();
+    badge.fillStyle(roleColorForItem(item), 0.9);
+    badge.fillRoundedRect(x - width / 2, y - 11, width, 22, 11);
+    badge.lineStyle(1.5, PALETTE.ink, 0.28);
+    badge.strokeRoundedRect(x - width / 2, y - 11, width, 22, 11);
+    this.add
+      .text(x, y + 1, roleLabelsForItem(item), {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "11px",
+        fontStyle: "900",
+        color: "#ffffff",
+        fixedWidth: width - 10,
+        align: "center",
+      })
+      .setOrigin(0.5);
+  }
+
+}
+
+function roleColorForBuild(role: ReturnType<typeof getEquippedGearBuild>["primaryRole"]) {
+  return {
+    starter: 0x8ea4b0,
+    navigator: 0x46bcc8,
+    reeler: 0xf0ad3d,
+    naturalist: 0x69b985,
+    stormbreaker: 0x5f89a6,
+    deepExplorer: 0x315a73,
+    mythSeeker: 0x8f75e8,
+    mutationHunter: 0xff9fbd,
+  }[role];
 }

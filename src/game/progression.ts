@@ -1,4 +1,5 @@
 import { areas, fish, getFish, getItem, getStoryChoice, items, quests, storyChoices } from "./content";
+import { getGearBuildProfile } from "./gearRoles";
 import {
   countCollectedVariants,
   getResearchRank,
@@ -10,6 +11,7 @@ import type {
   CatchMutationId,
   CatchQuality,
   FishDefinition,
+  GearBuildProfile,
   PlayerState,
   QuestDefinition,
   QuestStep,
@@ -62,7 +64,11 @@ export function canDiscoverArea(state: PlayerState, area: AreaDefinition): boole
   }
 
   const route = area.route;
-  return Boolean(route && state.level >= route.discoveryLevel && requirementsMet(state, route.requirements));
+  if (!route) {
+    return false;
+  }
+  const discoveryLevel = Math.max(1, route.discoveryLevel - (getEquippedGearBuild(state).primaryRole === "navigator" ? 2 : 0));
+  return state.level >= discoveryLevel && requirementsMet(state, route.requirements);
 }
 
 export function discoverArea(state: PlayerState, areaId: string): PlayerState {
@@ -201,7 +207,11 @@ export function equipItem(state: PlayerState, itemId: string): PlayerState {
 }
 
 export function getRodEase(state: PlayerState): number {
-  return (getItem(state.equippedRodId)?.effect?.catchEase ?? 0) + (getItem(state.equippedBoatId)?.effect?.catchEase ?? 0);
+  return (
+    (getItem(state.equippedRodId)?.effect?.catchEase ?? 0) +
+    (getItem(state.equippedBoatId)?.effect?.catchEase ?? 0) +
+    (getEquippedGearBuild(state).effect.catchEase ?? 0)
+  );
 }
 
 export function getRareBoost(state: PlayerState): number {
@@ -209,7 +219,8 @@ export function getRareBoost(state: PlayerState): number {
     (state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.rareBoost ?? 0) : 0) +
     (getItem(state.equippedRodId)?.effect?.rareBoost ?? 0) +
     (getItem(state.equippedBoatId)?.effect?.rareBoost ?? 0) +
-    (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.rareBoost ?? 0) : 0)
+    (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.rareBoost ?? 0) : 0) +
+    (getEquippedGearBuild(state).effect.rareBoost ?? 0)
   );
 }
 
@@ -217,14 +228,16 @@ export function getLureSpeed(state: PlayerState): number {
   return (
     (getItem(state.equippedRodId)?.effect?.lureSpeed ?? 0) +
     (state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.lureSpeed ?? 0) : 0) +
-    (getItem(state.equippedBoatId)?.effect?.lureSpeed ?? 0)
+    (getItem(state.equippedBoatId)?.effect?.lureSpeed ?? 0) +
+    (getEquippedGearBuild(state).effect.lureSpeed ?? 0)
   );
 }
 
 export function getReelPower(state: PlayerState): number {
   return (
     (getItem(state.equippedRodId)?.effect?.reelPower ?? 0) +
-    (getItem(state.equippedBoatId)?.effect?.reelPower ?? 0)
+    (getItem(state.equippedBoatId)?.effect?.reelPower ?? 0) +
+    (getEquippedGearBuild(state).effect.reelPower ?? 0)
   );
 }
 
@@ -233,15 +246,26 @@ export function getMutationChance(state: PlayerState): number {
     (getItem(state.equippedRodId)?.effect?.mutationChance ?? 0) +
     (state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.mutationChance ?? 0) : 0) +
     (getItem(state.equippedBoatId)?.effect?.mutationChance ?? 0) +
-    (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.mutationChance ?? 0) : 0)
+    (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.mutationChance ?? 0) : 0) +
+    (getEquippedGearBuild(state).effect.mutationChance ?? 0)
   );
 }
 
 export function getBoatSpeed(state: PlayerState): number {
   return (
     (getItem(state.equippedBoatId)?.effect?.boatSpeed ?? 0) +
-    (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.boatSpeed ?? 0) : 0)
+    (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.boatSpeed ?? 0) : 0) +
+    (getEquippedGearBuild(state).effect.boatSpeed ?? 0)
   );
+}
+
+export function getEquippedGearBuild(state: PlayerState): GearBuildProfile {
+  return getGearBuildProfile([
+    getItem(state.equippedRodId),
+    state.equippedBaitId ? getItem(state.equippedBaitId) : undefined,
+    getItem(state.equippedBoatId),
+    state.equippedBoatCosmeticId ? getItem(state.equippedBoatCosmeticId) : undefined,
+  ]);
 }
 
 export function getFishAffinityBoost(state: PlayerState, fish: FishDefinition): number {
@@ -262,7 +286,7 @@ export function getFishAffinityBoost(state: PlayerState, fish: FishDefinition): 
       (effect.habitatBoost && fish.habitatTags.includes(effect.habitatBoost) ? 0.18 : 0) +
       (effect.rarityBoosts?.[fish.rarity] ?? 0)
     );
-  }, 0);
+  }, getEquippedGearBuild(state).effect.affinityBoost ?? 0);
 }
 
 export function stepProgress(state: PlayerState, step: QuestStep): number {

@@ -3,7 +3,7 @@ import { addPlayerBoat } from "../game/boat";
 import { getArea } from "../game/content";
 import { playHaptic, stopHaptics } from "../game/haptics";
 import { playSoftTone } from "../game/audio";
-import { getReelPower, recordCatch, recordConsolation, refreshQuestCompletion } from "../game/progression";
+import { getEquippedGearBuild, getReelPower, recordCatch, recordConsolation, refreshQuestCompletion } from "../game/progression";
 import { resolveTiming, startFishing } from "../game/fishing";
 import { ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
@@ -64,6 +64,7 @@ export class FishingScene extends Phaser.Scene {
     if (weather) {
       this.addWeatherBadge(weather.label, weather.description, weatherEffectLabel(weather), weather.tint);
     }
+    this.addBuildBadge();
 
     const loadingText = this.add
       .text(480, 330, "낚시 장비를 준비하는 중...", {
@@ -385,6 +386,21 @@ export class FishingScene extends Phaser.Scene {
         })
         .setOrigin(0, 0.5),
     );
+  }
+
+  private addBuildBadge() {
+    const build = getEquippedGearBuild(this.state);
+    this.add
+      .text(480, 196, `세팅 ${build.label} · 시너지 ${build.synergyLevel}단계`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "15px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        backgroundColor: "rgba(255,251,239,0.62)",
+        padding: { x: 12, y: 5 },
+      })
+      .setOrigin(0.5)
+      .setDepth(6);
   }
 
   private playCastEffects() {

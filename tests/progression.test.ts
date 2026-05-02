@@ -7,8 +7,10 @@ import {
   discoverArea,
   getAvailableStoryChoices,
   getBoatSpeed,
+  getEquippedGearBuild,
   getLureSpeed,
   getMutationChance,
+  getRareBoost,
   getVisibleQuests,
   recordCatch,
   refreshQuestCompletion,
@@ -121,5 +123,29 @@ describe("progression", () => {
     expect(getBoatSpeed(next)).toBeGreaterThan(0);
     expect(getLureSpeed(next)).toBeGreaterThan(0);
     expect(getMutationChance(next)).toBeGreaterThan(0);
+  });
+
+  it("creates role-based build synergy from equipped gear", () => {
+    const state = {
+      ...createInitialState(),
+      equippedRodId: "aurora-crown-rod",
+      equippedBoatId: "aurora-regalia",
+      equippedBaitId: "aurora-pearl-bait",
+      equippedBoatCosmeticId: "aurora-crown-flag",
+      ownedItemIds: [
+        ...createInitialState().ownedItemIds,
+        "aurora-crown-rod",
+        "aurora-regalia",
+        "aurora-pearl-bait",
+        "aurora-crown-flag",
+      ],
+    };
+
+    const build = getEquippedGearBuild(state);
+
+    expect(build.primaryRole).toBe("mutationHunter");
+    expect(build.synergyLevel).toBeGreaterThan(0);
+    expect(getMutationChance(state)).toBeGreaterThan(0.15);
+    expect(getRareBoost(state)).toBeGreaterThan(0.2);
   });
 });

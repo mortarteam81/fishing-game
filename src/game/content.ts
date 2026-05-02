@@ -9,6 +9,7 @@ import type {
   SeaFriendSize,
   StoryChoiceDefinition,
 } from "./types";
+import { decorateGearItem } from "./gearRoles";
 
 type FishDraft = Omit<FishDefinition, "family" | "habitatTags" | "size" | "behaviorTags"> &
   Partial<Pick<FishDefinition, "family" | "habitatTags" | "size" | "behaviorTags">>;
@@ -1212,7 +1213,7 @@ const legendFlags: ItemDefinition[] = [
   },
 ];
 
-export const items: ItemDefinition[] = [
+const rawItems: ItemDefinition[] = [
   ...baseItems,
   ...generatedRods,
   ...generatedBoats,
@@ -1223,6 +1224,8 @@ export const items: ItemDefinition[] = [
   ...legendBaits,
   ...legendFlags,
 ];
+
+export const items: ItemDefinition[] = rawItems.map(decorateGearItem);
 
 export const storyChoices: StoryChoiceDefinition[] = [
   {

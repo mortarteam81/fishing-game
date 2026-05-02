@@ -71,6 +71,16 @@ export type WeatherDefinition = {
   };
 };
 
+export type GearRole =
+  | "starter"
+  | "navigator"
+  | "reeler"
+  | "naturalist"
+  | "stormbreaker"
+  | "deepExplorer"
+  | "mythSeeker"
+  | "mutationHunter";
+
 export type CaptainStyle = {
   presetId: string;
   name: string;
@@ -170,6 +180,8 @@ export type ItemDefinition = {
   kind: "rod" | "bait" | "boat" | "boatCosmetic";
   shellCost: number;
   description: string;
+  roleTags?: GearRole[];
+  setId?: string;
   effect?: {
     catchEase?: number;
     lureSpeed?: number;
@@ -181,6 +193,25 @@ export type ItemDefinition = {
     rarityBoosts?: Partial<Record<Rarity, number>>;
     familyBoost?: SeaFriendFamily;
     habitatBoost?: SeaFriendHabitat;
+  };
+};
+
+export type GearBuildProfile = {
+  primaryRole: GearRole;
+  label: string;
+  shortLabel: string;
+  description: string;
+  score: number;
+  synergyLevel: number;
+  roleScores: Partial<Record<GearRole, number>>;
+  effect: {
+    catchEase?: number;
+    lureSpeed?: number;
+    reelPower?: number;
+    rareBoost?: number;
+    mutationChance?: number;
+    boatSpeed?: number;
+    affinityBoost?: number;
   };
 };
 

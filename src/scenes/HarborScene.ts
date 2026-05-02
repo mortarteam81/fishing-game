@@ -6,6 +6,7 @@ import { PALETTE, TEXT } from "../game/palette";
 import {
   applyStoryChoice,
   getAvailableStoryChoices,
+  getEquippedGearBuild,
   isAreaDiscovered,
   nextQuestHint,
   refreshQuestCompletion,
@@ -91,6 +92,18 @@ export class HarborScene extends Phaser.Scene {
         fontStyle: "700",
         color: TEXT.secondary,
         wordWrap: { width: 480 },
+      })
+      .setOrigin(0, 0.5);
+
+    const build = getEquippedGearBuild(this.state);
+    this.add
+      .text(380, 206, `장비 빌드: ${build.label} · 시너지 ${build.synergyLevel}단계`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "16px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        backgroundColor: "rgba(255,251,239,0.58)",
+        padding: { x: 10, y: 4 },
       })
       .setOrigin(0, 0.5);
   }

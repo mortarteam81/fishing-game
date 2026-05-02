@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { areas, fish, items, quests, storyChoices } from "../src/game/content";
+import { gearRoleMeta } from "../src/game/gearRoles";
 import { weatherDefinitions } from "../src/game/weather";
 
 describe("content data", () => {
@@ -49,6 +50,12 @@ describe("content data", () => {
     expect(items.filter((item) => item.kind === "boat")).toHaveLength(39);
     expect(items.filter((item) => item.kind === "bait")).toHaveLength(42);
     expect(items.filter((item) => item.kind === "boatCosmetic")).toHaveLength(43);
+    for (const item of items) {
+      expect(item.roleTags?.length).toBeGreaterThan(0);
+      for (const role of item.roleTags ?? []) {
+        expect(gearRoleMeta[role]).toBeTruthy();
+      }
+    }
     expect(quests).toHaveLength(10);
     expect(questIds.size).toBe(quests.length);
 
