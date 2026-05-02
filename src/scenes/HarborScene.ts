@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 import { addPlayerBoat } from "../game/boat";
+import { getEquippedCompanionProfiles } from "../game/companions";
+import { addCompanionFollowers } from "../game/companionVisuals";
 import { areas } from "../game/content";
-import { ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
+import { companionTextures, ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import {
   applyStoryChoice,
@@ -45,10 +47,11 @@ export class HarborScene extends Phaser.Scene {
   }
 
   private async renderWhenReady(loadingText: Phaser.GameObjects.Text) {
-    await ensureSvgTextures(this, playerPresentationTextures(this.state));
+    await ensureSvgTextures(this, [...playerPresentationTextures(this.state), ...companionTextures(this.state)]);
     loadingText.destroy();
     this.addBoat();
     this.addHeroPanel();
+    this.addCompanionPanel();
     this.addStoryChoicePanel();
     this.addVoyagePanel();
     this.addNavigation();
@@ -56,6 +59,7 @@ export class HarborScene extends Phaser.Scene {
 
   private addBoat() {
     const boat = addPlayerBoat(this, 190, 302, this.state, { scale: 1.18, depth: 5 });
+    addCompanionFollowers(this, boat, this.state, "harbor");
     this.tweens.add({
       targets: boat,
       y: 316,
@@ -104,6 +108,42 @@ export class HarborScene extends Phaser.Scene {
         color: TEXT.primary,
         backgroundColor: "rgba(255,251,239,0.58)",
         padding: { x: 10, y: 4 },
+      })
+      .setOrigin(0, 0.5);
+  }
+
+  private addCompanionPanel() {
+    const companions = getEquippedCompanionProfiles(this.state);
+    const lead = companions[0];
+    if (!lead) {
+      return;
+    }
+
+    addPanel(this, 190, 382, 302, 82, PALETTE.paper);
+    this.add
+      .text(62, 357, "오늘의 동료", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "16px",
+        fontStyle: "900",
+        color: TEXT.secondary,
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(62, 381, `${lead.fish.name} · ${lead.mood}`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: lead.fish.name.length > 8 ? "17px" : "19px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        fixedWidth: 250,
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(62, 407, lead.effectLabel, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "13px",
+        fontStyle: "800",
+        color: TEXT.secondary,
+        fixedWidth: 250,
       })
       .setOrigin(0, 0.5);
   }

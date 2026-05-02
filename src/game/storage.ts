@@ -1,4 +1,5 @@
 import { areas, quests } from "./content";
+import { normalizeAffinity, normalizeCompanions, normalizeEquippedCompanions, STARTER_COMPANION_ID } from "./companions";
 import { seedResearchRecord } from "./research";
 import type { CaptainStyle, DexResearchRecord, PlayerState, VariantCollection } from "./types";
 
@@ -33,13 +34,16 @@ export const defaultCaptain: CaptainStyle = {
 };
 
 export const createInitialState = (): PlayerState => ({
-  saveVersion: 5,
+  saveVersion: 6,
   shells: 35,
   level: 1,
   xp: 0,
   collection: {},
   researchProgress: {},
   variantCollection: {},
+  companions: [STARTER_COMPANION_ID],
+  equippedCompanionIds: [STARTER_COMPANION_ID],
+  affinity: { [STARTER_COMPANION_ID]: 34 },
   discoveredAreaIds: [],
   captain: defaultCaptain,
   equippedRodId: "twig-rod",
@@ -74,7 +78,7 @@ export function saveGame(state: PlayerState): void {
     return;
   }
 
-  const stored = { ...state, saveVersion: 5 };
+  const stored = { ...state, saveVersion: 6 };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   writeServerBackup(STORAGE_KEY, stored);
 }
@@ -118,7 +122,7 @@ export function saveGameToSlot(slotId: number, state: PlayerState): void {
   }
 
   const key = slotKey(slotId);
-  const stored = { ...state, saveVersion: 5, savedAt: new Date().toISOString() };
+  const stored = { ...state, saveVersion: 6, savedAt: new Date().toISOString() };
   localStorage.setItem(key, JSON.stringify(stored));
   writeServerBackup(key, stored);
 }
@@ -188,16 +192,22 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   const initial = createInitialState();
   const level = parsed.level ?? initial.level;
   const collection = { ...initial.collection, ...(parsed.collection ?? {}) };
+  const companions = normalizeCompanions(parsed.companions, collection);
+  const equippedCompanionIds = normalizeEquippedCompanions(parsed.equippedCompanionIds, companions);
+  const affinity = normalizeAffinity(parsed.affinity, collection, companions);
   const levelUnlockedAreaIds = areas
     .filter((area) => !area.hidden && area.requiredLevel <= level)
     .map((area) => area.id);
   return {
     ...initial,
     ...parsed,
-    saveVersion: 5,
+    saveVersion: 6,
     collection,
     researchProgress: normalizeResearchProgress(parsed.researchProgress, collection),
     variantCollection: normalizeVariantCollection(parsed.variantCollection),
+    companions,
+    equippedCompanionIds,
+    affinity,
     discoveredAreaIds: Array.from(new Set([...(parsed.discoveredAreaIds ?? [])])),
     captain: {
       ...initial.captain,
@@ -251,7 +261,8 @@ function parseStoredState(raw: string | null): StoredPlayerState | undefined {
       parsed.saveVersion !== 2 &&
       parsed.saveVersion !== 3 &&
       parsed.saveVersion !== 4 &&
-      parsed.saveVersion !== 5
+      parsed.saveVersion !== 5 &&
+      parsed.saveVersion !== 6
     ) {
       return undefined;
     }
@@ -300,6 +311,8 @@ function progressScore(value: StoredPlayerState | undefined): number {
     collectionCount * 50 +
     researchPoints * 12 +
     variantCount * 80 +
+    (value.companions?.length ?? 0) * 35 +
+    Object.values(value.affinity ?? {}).reduce((sum, affinity) => sum + Math.max(0, affinity ?? 0), 0) * 2 +
     (value.discoveredAreaIds?.length ?? 0) * 120 +
     (value.ownedItemIds?.length ?? 0) * 20 +
     (value.unlockedAreaIds?.length ?? 0) * 20 +

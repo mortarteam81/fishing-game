@@ -1,7 +1,9 @@
 import Phaser from "phaser";
+import { companionMoodLabel } from "../game/companions";
 import { areas, fish } from "../game/content";
 import { ensureSvgTextures, fishTexture } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
+import { equipCompanion } from "../game/progression";
 import {
   getNextResearchTarget,
   getResearchCompletionRatio,
@@ -9,7 +11,7 @@ import {
   getResearchRank,
   mutationMeta,
 } from "../game/research";
-import { loadGame } from "../game/storage";
+import { loadGame, saveGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addTextButton } from "../game/ui";
 import type {
   CatchMutationId,
@@ -306,7 +308,7 @@ export class CollectionScene extends Phaser.Scene {
     const x = CARD_X_START + col * CARD_X_GAP;
     const y = CARD_Y_START + row * CARD_Y_GAP;
     const count = this.state.collection[entry.id] ?? 0;
-    const discovered = count > 0;
+    const discovered = count > 0 || this.state.companions.includes(entry.id);
     const meta = rarityMeta[entry.rarity];
     const container = this.add.container(x, y).setDepth(2);
     const graphics = this.add.graphics();
@@ -563,13 +565,16 @@ export class CollectionScene extends Phaser.Scene {
   private showCardDetail(entry: FishDefinition, cardNumber: number, count: number) {
     this.detailLayer?.destroy(true);
 
-    const discovered = count > 0;
+    const discovered = count > 0 || this.state.companions.includes(entry.id);
     const meta = rarityMeta[entry.rarity];
     const research = this.state.researchProgress[entry.id];
     const researchPoints = discovered ? research?.points ?? 1 : 0;
     const researchMeta = getResearchMeta(researchPoints);
     const nextResearchTarget = getNextResearchTarget(researchPoints);
     const variantLine = this.variantDetailLine(entry.id);
+    const companionReady = this.state.companions.includes(entry.id);
+    const companionEquipped = this.state.equippedCompanionIds.includes(entry.id);
+    const affinity = this.state.affinity[entry.id] ?? 0;
     const layer = this.add.container(0, 0).setDepth(80);
     this.detailLayer = layer;
 
@@ -711,6 +716,40 @@ export class CollectionScene extends Phaser.Scene {
         )
         .setOrigin(0, 0.5),
     );
+
+    if (companionReady) {
+      layer.add(
+        this.add
+          .text(470, 424, `동료 친밀도 ${affinity} · ${companionMoodLabel(affinity)}`, {
+            fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+            fontSize: "14px",
+            fontStyle: "900",
+            color: TEXT.primary,
+            fixedWidth: 164,
+          })
+          .setOrigin(0, 0.5),
+      );
+
+      const button = addTextButton(
+        this,
+        674,
+        424,
+        companionEquipped ? "동행 중" : "동행하기",
+        () => {
+          const next = equipCompanion(this.state, entry.id);
+          saveGame(next);
+          this.scene.restart({ page: this.page });
+        },
+        {
+          width: 132,
+          height: 42,
+          fontSize: 16,
+          fill: companionEquipped ? PALETTE.seaFoam : PALETTE.butter,
+          disabled: companionEquipped,
+        },
+      );
+      layer.add(button);
+    }
 
     const close = this.add.graphics();
     close.fillStyle(PALETTE.paper, 0.96);

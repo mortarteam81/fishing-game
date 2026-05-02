@@ -1,8 +1,9 @@
 import Phaser from "phaser";
 import { addPlayerBoat, boatWakeTint } from "../game/boat";
+import { addCompanionFollowers } from "../game/companionVisuals";
 import { areas, fish } from "../game/content";
 import { fixedContentOffset, fixedScreenCenterX, sceneGameWidth } from "../game/layout";
-import { ensureSvgTextures, fishTexturesForIds, playerPresentationTextures } from "../game/lazyTextures";
+import { companionTextures, ensureSvgTextures, fishTexturesForIds, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { playSoftTone } from "../game/audio";
 import { canDiscoverArea, discoverArea, getBoatSpeed, isAreaDiscovered } from "../game/progression";
@@ -170,6 +171,7 @@ export class OceanScene extends Phaser.Scene {
   private async renderWhenReady(loadingObjects: Phaser.GameObjects.GameObject[]) {
     await ensureSvgTextures(this, [
       ...playerPresentationTextures(this.state),
+      ...companionTextures(this.state),
       ...fishTexturesForIds(this.oceanFishIds()),
     ]);
     loadingObjects.forEach((object) => object.destroy());
@@ -351,6 +353,7 @@ export class OceanScene extends Phaser.Scene {
 
   private addBoat() {
     this.boat = addPlayerBoat(this, 230, 850, this.state, { scale: 0.82, depth: 12, mapMode: true, showCaptain: false });
+    addCompanionFollowers(this, this.boat, this.state, "ocean");
     this.cameras.main.startFollow(this.boat, true, 0.08, 0.08);
     this.tweens.add({
       targets: this.boat,

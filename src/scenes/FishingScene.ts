@@ -1,11 +1,12 @@
 import Phaser from "phaser";
 import { addPlayerBoat } from "../game/boat";
+import { addCompanionBadge, addCompanionFollowers } from "../game/companionVisuals";
 import { getArea } from "../game/content";
 import { playHaptic, stopHaptics } from "../game/haptics";
 import { playSoftTone } from "../game/audio";
 import { getEquippedGearBuild, getReelPower, recordCatch, recordConsolation, refreshQuestCompletion } from "../game/progression";
 import { resolveTiming, startFishing } from "../game/fishing";
-import { ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
+import { companionTextures, ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { loadGame, saveGame } from "../game/storage";
 import { itemIconTextureKey } from "../game/textureKeys";
@@ -65,6 +66,7 @@ export class FishingScene extends Phaser.Scene {
       this.addWeatherBadge(weather.label, weather.description, weatherEffectLabel(weather), weather.tint);
     }
     this.addBuildBadge();
+    addCompanionBadge(this, 480, 226, this.state);
 
     const loadingText = this.add
       .text(480, 330, "낚시 장비를 준비하는 중...", {
@@ -82,7 +84,7 @@ export class FishingScene extends Phaser.Scene {
   }
 
   private async renderFishingSetup(loadingText: Phaser.GameObjects.Text) {
-    await ensureSvgTextures(this, playerPresentationTextures(this.state));
+    await ensureSvgTextures(this, [...playerPresentationTextures(this.state), ...companionTextures(this.state)]);
     loadingText.destroy();
     this.addFishingSetPiece();
     this.castButton = addTextButton(this, 480, 430, "낚시하기", () => this.castLine(), {
@@ -342,7 +344,8 @@ export class FishingScene extends Phaser.Scene {
     const area = getArea(this.areaId);
     const landmark = area?.mapTexture ?? "map-island";
     this.add.image(738, 308, landmark).setScale(area?.theme === "pier" ? 1.05 : 0.92).setAlpha(0.86);
-    addPlayerBoat(this, 210, 284, this.state, { scale: 0.98, depth: 5 });
+    const boat = addPlayerBoat(this, 210, 284, this.state, { scale: 0.98, depth: 5 });
+    addCompanionFollowers(this, boat, this.state, "fishing");
     this.add
       .image(278, 266, itemIconTextureKey(this.state.equippedRodId))
       .setScale(0.34)

@@ -287,13 +287,16 @@ export type QuestProgress = {
 };
 
 export type PlayerState = {
-  saveVersion: 5;
+  saveVersion: 6;
   shells: number;
   level: number;
   xp: number;
   collection: Record<string, number>;
   researchProgress: Record<string, DexResearchRecord>;
   variantCollection: Record<string, VariantCollection>;
+  companions: string[];
+  equippedCompanionIds: string[];
+  affinity: Record<string, number>;
   discoveredAreaIds: string[];
   captain: CaptainStyle;
   equippedRodId: string;

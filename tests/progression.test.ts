@@ -5,6 +5,7 @@ import {
   claimQuest,
   canDiscoverArea,
   discoverArea,
+  equipCompanion,
   getAvailableStoryChoices,
   getBoatSpeed,
   getEquippedGearBuild,
@@ -147,5 +148,22 @@ describe("progression", () => {
     expect(build.synergyLevel).toBeGreaterThan(0);
     expect(getMutationChance(state)).toBeGreaterThan(0.15);
     expect(getRareBoost(state)).toBeGreaterThan(0.2);
+  });
+
+  it("unlocks caught sea friends as companions and grows affinity", () => {
+    const caught = recordCatch(createInitialState(), "sunny-minnow", 10, 10, {
+      areaId: "sunny-beach",
+      quality: "great",
+    });
+
+    expect(caught.companions).toContain("rainbow-whale");
+    expect(caught.companions).toContain("sunny-minnow");
+    expect(caught.affinity["sunny-minnow"]).toBeGreaterThan(0);
+    expect(caught.affinity["rainbow-whale"]).toBeGreaterThan(createInitialState().affinity["rainbow-whale"]);
+
+    const equipped = equipCompanion(caught, "sunny-minnow");
+
+    expect(equipped.equippedCompanionIds[0]).toBe("sunny-minnow");
+    expect(equipped.equippedCompanionIds).toContain("rainbow-whale");
   });
 });

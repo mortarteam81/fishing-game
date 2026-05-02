@@ -1,4 +1,11 @@
 import { areas, fish, getFish, getItem, getStoryChoice, items, quests, storyChoices } from "./content";
+import {
+  applyCatchCompanionProgress,
+  equipCompanion as equipCompanionState,
+  getCompanionAssist,
+  getCompanionFishAffinityBoost,
+  rewardEquippedCompanionAffinity,
+} from "./companions";
 import { getGearBuildProfile } from "./gearRoles";
 import {
   countCollectedVariants,
@@ -136,7 +143,7 @@ export function recordCatch(
         }
       : state.variantCollection;
 
-  return addXp(
+  const progressed = addXp(
     {
       ...state,
       shells: state.shells + shells,
@@ -149,10 +156,12 @@ export function recordCatch(
     },
     xp,
   );
+
+  return applyCatchCompanionProgress(progressed, fishId, details.quality);
 }
 
 export function recordConsolation(state: PlayerState, shells: number, xp: number): PlayerState {
-  return addXp({ ...state, shells: state.shells + shells }, xp);
+  return rewardEquippedCompanionAffinity(addXp({ ...state, shells: state.shells + shells }, xp), 1);
 }
 
 export function canBuyItem(state: PlayerState, itemId: string): boolean {
@@ -206,11 +215,16 @@ export function equipItem(state: PlayerState, itemId: string): PlayerState {
   return state;
 }
 
+export function equipCompanion(state: PlayerState, fishId: string): PlayerState {
+  return equipCompanionState(state, fishId);
+}
+
 export function getRodEase(state: PlayerState): number {
   return (
     (getItem(state.equippedRodId)?.effect?.catchEase ?? 0) +
     (getItem(state.equippedBoatId)?.effect?.catchEase ?? 0) +
-    (getEquippedGearBuild(state).effect.catchEase ?? 0)
+    (getEquippedGearBuild(state).effect.catchEase ?? 0) +
+    getCompanionAssist(state).catchEase
   );
 }
 
@@ -220,7 +234,8 @@ export function getRareBoost(state: PlayerState): number {
     (getItem(state.equippedRodId)?.effect?.rareBoost ?? 0) +
     (getItem(state.equippedBoatId)?.effect?.rareBoost ?? 0) +
     (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.rareBoost ?? 0) : 0) +
-    (getEquippedGearBuild(state).effect.rareBoost ?? 0)
+    (getEquippedGearBuild(state).effect.rareBoost ?? 0) +
+    getCompanionAssist(state).rareBoost
   );
 }
 
@@ -229,7 +244,8 @@ export function getLureSpeed(state: PlayerState): number {
     (getItem(state.equippedRodId)?.effect?.lureSpeed ?? 0) +
     (state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.lureSpeed ?? 0) : 0) +
     (getItem(state.equippedBoatId)?.effect?.lureSpeed ?? 0) +
-    (getEquippedGearBuild(state).effect.lureSpeed ?? 0)
+    (getEquippedGearBuild(state).effect.lureSpeed ?? 0) +
+    getCompanionAssist(state).lureSpeed
   );
 }
 
@@ -237,7 +253,8 @@ export function getReelPower(state: PlayerState): number {
   return (
     (getItem(state.equippedRodId)?.effect?.reelPower ?? 0) +
     (getItem(state.equippedBoatId)?.effect?.reelPower ?? 0) +
-    (getEquippedGearBuild(state).effect.reelPower ?? 0)
+    (getEquippedGearBuild(state).effect.reelPower ?? 0) +
+    getCompanionAssist(state).reelPower
   );
 }
 
@@ -247,7 +264,8 @@ export function getMutationChance(state: PlayerState): number {
     (state.equippedBaitId ? (getItem(state.equippedBaitId)?.effect?.mutationChance ?? 0) : 0) +
     (getItem(state.equippedBoatId)?.effect?.mutationChance ?? 0) +
     (state.equippedBoatCosmeticId ? (getItem(state.equippedBoatCosmeticId)?.effect?.mutationChance ?? 0) : 0) +
-    (getEquippedGearBuild(state).effect.mutationChance ?? 0)
+    (getEquippedGearBuild(state).effect.mutationChance ?? 0) +
+    getCompanionAssist(state).mutationChance
   );
 }
 
@@ -286,7 +304,7 @@ export function getFishAffinityBoost(state: PlayerState, fish: FishDefinition): 
       (effect.habitatBoost && fish.habitatTags.includes(effect.habitatBoost) ? 0.18 : 0) +
       (effect.rarityBoosts?.[fish.rarity] ?? 0)
     );
-  }, getEquippedGearBuild(state).effect.affinityBoost ?? 0);
+  }, (getEquippedGearBuild(state).effect.affinityBoost ?? 0) + getCompanionAssist(state).affinityBoost + getCompanionFishAffinityBoost(state, fish));
 }
 
 export function stepProgress(state: PlayerState, step: QuestStep): number {

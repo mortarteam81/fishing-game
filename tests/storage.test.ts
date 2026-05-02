@@ -160,12 +160,17 @@ describe("save slots", () => {
 
     const loaded = loadGame();
 
-    expect(loaded.saveVersion).toBe(5);
+    expect(loaded.saveVersion).toBe(6);
     expect(loaded.collection["sunny-minnow"]).toBe(4);
     expect(typeof loaded.collection["sunny-minnow"]).toBe("number");
     expect(loaded.researchProgress["sunny-minnow"].catches).toBe(4);
     expect(loaded.researchProgress["sunny-minnow"].points).toBeGreaterThan(0);
     expect(loaded.variantCollection).toEqual({});
+    expect(loaded.companions).toContain("rainbow-whale");
+    expect(loaded.companions).toContain("sunny-minnow");
+    expect(loaded.equippedCompanionIds).toEqual(["rainbow-whale"]);
+    expect(loaded.affinity["rainbow-whale"]).toBeGreaterThan(0);
+    expect(loaded.affinity["sunny-minnow"]).toBeGreaterThan(0);
     expect(loaded.discoveredAreaIds).toEqual([]);
   });
 

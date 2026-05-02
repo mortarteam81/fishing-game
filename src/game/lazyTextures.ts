@@ -57,6 +57,10 @@ export function fishTexturesForIds(ids: readonly string[]): TextureRequest[] {
   return ids.flatMap((id) => fishTexture(getFish(id)));
 }
 
+export function companionTextures(state: PlayerState): TextureRequest[] {
+  return fishTexturesForIds(state.equippedCompanionIds);
+}
+
 export async function ensureSvgTextures(scene: Phaser.Scene, requests: TextureRequest[]): Promise<void> {
   const unique = uniqueMissingRequests(scene, requests);
   if (unique.length === 0) {
