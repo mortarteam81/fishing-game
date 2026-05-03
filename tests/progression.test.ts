@@ -21,6 +21,7 @@ import {
   unlockAreasForLevel,
 } from "../src/game/progression";
 import { getArea } from "../src/game/content";
+import { getStarterJourney } from "../src/game/onboarding";
 import { createInitialState } from "../src/game/storage";
 
 describe("progression", () => {
@@ -79,6 +80,35 @@ describe("progression", () => {
     expect(refreshed.questProgress["first-friend"].completed).toBe(true);
     expect(claimed.questProgress["first-friend"].claimed).toBe(true);
     expect(claimed.shells).toBeGreaterThan(refreshed.shells);
+  });
+
+  it("keeps the first-session quest list focused and advances starter guidance", () => {
+    const initial = createInitialState();
+
+    expect(getVisibleQuests(initial).map((quest) => quest.id)).toEqual(["first-friend"]);
+    expect(getStarterJourney(initial)).toMatchObject({
+      title: "첫 친구 만나기",
+      scene: "Fishing",
+      step: 1,
+    });
+
+    const caught = refreshQuestCompletion(recordCatch(initial, "sunny-minnow", 10, 10));
+    expect(getStarterJourney(caught)).toMatchObject({
+      title: "첫 보상 받기",
+      scene: "Quest",
+      step: 2,
+    });
+
+    const claimed = claimQuest(caught, "first-friend");
+    expect(getVisibleQuests(claimed).map((quest) => quest.id)).toEqual(
+      expect.arrayContaining(["tiny-collector", "better-rod"]),
+    );
+    expect(getVisibleQuests(claimed).map((quest) => quest.id)).not.toContain("rainbow-dream");
+    expect(getStarterJourney(claimed)).toMatchObject({
+      title: "첫 항로 정하기",
+      scene: "Harbor",
+      step: 3,
+    });
   });
 
   it("buys and equips rods when enough shells are available", () => {

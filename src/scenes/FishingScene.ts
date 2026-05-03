@@ -24,6 +24,7 @@ export class FishingScene extends Phaser.Scene {
   private targetZone?: Phaser.GameObjects.Rectangle;
   private progressBar?: Phaser.GameObjects.Rectangle;
   private waitingText?: Phaser.GameObjects.Text;
+  private beginnerHint?: Phaser.GameObjects.Container;
   private meterActive = false;
   private reeling = false;
   private direction = 1;
@@ -87,6 +88,7 @@ export class FishingScene extends Phaser.Scene {
     await ensureSvgTextures(this, [...playerPresentationTextures(this.state), ...companionTextures(this.state)]);
     loadingText.destroy();
     this.addFishingSetPiece();
+    this.addBeginnerFishingHint();
     this.castButton = addTextButton(this, 480, 430, "낚시하기", () => this.castLine(), {
       width: 230,
       height: 72,
@@ -136,6 +138,7 @@ export class FishingScene extends Phaser.Scene {
     if (this.castButton) {
       this.castButton.destroy();
     }
+    this.beginnerHint?.destroy();
 
     this.attempt = startFishing(this.areaId, this.state);
     this.score = 0;
@@ -360,6 +363,29 @@ export class FishingScene extends Phaser.Scene {
     line.strokePath();
     line.fillStyle(PALETTE.butter, 0.85);
     line.fillCircle(374, 365, 8);
+  }
+
+  private addBeginnerFishingHint() {
+    const totalCatches = Object.values(this.state.collection).reduce((sum, count) => sum + Math.max(0, count), 0);
+    if (totalCatches >= 3) {
+      return;
+    }
+
+    const bg = this.add
+      .rectangle(0, 0, 560, 48, PALETTE.paper, 0.88)
+      .setStrokeStyle(2, PALETTE.ink, 0.45);
+    const marker = this.add.circle(-250, 0, 9, PALETTE.coral, 0.95).setStrokeStyle(1, PALETTE.ink, 0.4);
+    const text = this.add
+      .text(-228, 0, "입질이 오면 길게 눌러 릴 감기 · 초록빛 안에 있을수록 빨라져요", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "17px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        fixedWidth: 468,
+      })
+      .setOrigin(0, 0.5);
+
+    this.beginnerHint = this.add.container(480, 362, [bg, marker, text]).setDepth(12);
   }
 
   private addWeatherBadge(label: string, description: string, effect: string, tint: number) {

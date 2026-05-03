@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { ensureSvgTextures, fishTexture } from "../game/lazyTextures";
+import { getStarterJourney } from "../game/onboarding";
 import { PALETTE, TEXT } from "../game/palette";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
 import { loadGame } from "../game/storage";
@@ -125,6 +126,45 @@ export class CatchResultScene extends Phaser.Scene {
       },
       )
       .setOrigin(0.5);
+
+    const starterJourney = getStarterJourney(this.state);
+    if (starterJourney) {
+      this.add
+        .text(480, 426, `다음 목표: ${starterJourney.title}`, {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "16px",
+          fontStyle: "900",
+          color: TEXT.secondary,
+          backgroundColor: "rgba(255,251,239,0.62)",
+          padding: { x: 10, y: 4 },
+        })
+        .setOrigin(0.5);
+      addTextButton(this, 318, 480, "한 번 더", () => this.scene.start("Fishing", { areaId: this.areaId }), {
+        width: 146,
+        height: 50,
+        fontSize: 17,
+        fill: PALETTE.butter,
+        iconKey: "icon-repeat",
+        iconScale: 0.32,
+      });
+      addTextButton(this, 480, 480, starterJourney.ctaLabel, () => this.scene.start(starterJourney.scene, starterJourney.data), {
+        width: 150,
+        height: 50,
+        fontSize: 16,
+        fill: PALETTE.lavender,
+        iconKey: starterJourney.scene === "Quest" ? "icon-quest" : starterJourney.scene === "Exchange" ? "icon-shop" : "icon-bait",
+        iconScale: 0.3,
+      });
+      addTextButton(this, 642, 480, "항구로", () => this.scene.start("Harbor"), {
+        width: 146,
+        height: 50,
+        fontSize: 17,
+        fill: PALETTE.seaFoam,
+        iconKey: "icon-harbor",
+        iconScale: 0.32,
+      });
+      return;
+    }
 
     addTextButton(this, 380, 470, "한 번 더", () => this.scene.start("Fishing", { areaId: this.areaId }), {
       width: 180,

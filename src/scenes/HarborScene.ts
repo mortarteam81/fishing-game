@@ -5,6 +5,7 @@ import { getEquippedCompanionProfiles } from "../game/companions";
 import { addCompanionFollowers } from "../game/companionVisuals";
 import { areas } from "../game/content";
 import { companionTextures, ensureSvgTextures, playerPresentationTextures } from "../game/lazyTextures";
+import { getStarterJourney, type StarterJourneyPrompt } from "../game/onboarding";
 import { PALETTE, TEXT } from "../game/palette";
 import {
   applyStoryChoice,
@@ -55,7 +56,12 @@ export class HarborScene extends Phaser.Scene {
     this.addHeroPanel();
     this.addCompanionPanel();
     if (!this.addStoryChoicePanel()) {
-      this.addChapterPanel();
+      const starterJourney = getStarterJourney(this.state);
+      if (starterJourney) {
+        this.addStarterJourneyPanel(starterJourney);
+      } else {
+        this.addChapterPanel();
+      }
     }
     this.addVoyagePanel();
     this.addNavigation();
@@ -239,6 +245,51 @@ export class HarborScene extends Phaser.Scene {
       );
     });
     return true;
+  }
+
+  private addStarterJourneyPanel(prompt: StarterJourneyPrompt) {
+    addPanel(this, 625, 354, 560, 124, PALETTE.paper);
+    this.add
+      .text(380, 318, `초보 선장 코스 ${prompt.step}/${prompt.totalSteps}`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "16px",
+        fontStyle: "900",
+        color: TEXT.secondary,
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(380, 344, prompt.title, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "25px",
+        fontStyle: "900",
+        color: TEXT.primary,
+      })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(380, 374, prompt.helper, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "15px",
+        fontStyle: "800",
+        color: TEXT.secondary,
+        wordWrap: { width: 336 },
+      })
+      .setOrigin(0, 0.5);
+
+    for (let index = 0; index < prompt.totalSteps; index += 1) {
+      const active = index + 1 <= prompt.step;
+      this.add
+        .circle(388 + index * 18, 404, active ? 5 : 4, active ? PALETTE.coral : PALETTE.seaFoam, active ? 0.95 : 0.5)
+        .setStrokeStyle(1, PALETTE.ink, active ? 0.45 : 0.2);
+    }
+
+    addTextButton(this, 746, 388, prompt.ctaLabel, () => this.scene.start(prompt.scene, prompt.data), {
+      width: 150,
+      height: 46,
+      fontSize: 16,
+      fill: PALETTE.butter,
+      iconKey: prompt.scene === "Quest" ? "icon-quest" : prompt.scene === "Exchange" ? "icon-shop" : "icon-bait",
+      iconScale: 0.3,
+    });
   }
 
   private addChapterPanel() {

@@ -1650,6 +1650,7 @@ export const quests: QuestDefinition[] = [
     id: "tiny-collector",
     title: "도감에 친구 3종 기록하기",
     helper: "서로 다른 바다 친구를 세 종류 만나봐요.",
+    requirements: [{ kind: "questClaimed", questId: "first-friend" }],
     steps: [{ kind: "collectUnique", count: 3 }],
     rewards: { shells: 40, xp: 28 },
   },
@@ -1657,6 +1658,7 @@ export const quests: QuestDefinition[] = [
     id: "better-rod",
     title: "반짝 낚싯대 준비하기",
     helper: "조개를 모아 반짝 낚싯대를 바꿔봐요.",
+    requirements: [{ kind: "questClaimed", questId: "first-friend" }],
     steps: [{ kind: "ownItem", itemId: "sparkle-rod" }],
     rewards: { shells: 30, xp: 30 },
   },
@@ -1664,6 +1666,7 @@ export const quests: QuestDefinition[] = [
     id: "pier-trip",
     title: "작은 방파제로 떠나요",
     helper: "레벨 3이 되면 새로운 낚시터가 열려요.",
+    requirements: [{ kind: "questClaimed", questId: "tiny-collector" }],
     steps: [{ kind: "unlockArea", areaId: "little-pier" }],
     rewards: { shells: 45, xp: 35 },
   },
@@ -1671,6 +1674,10 @@ export const quests: QuestDefinition[] = [
     id: "rainbow-dream",
     title: "무지개 아기고래 소문",
     helper: "산호초 바다에서 특별한 친구를 찾아봐요.",
+    requirements: [
+      { kind: "questClaimed", questId: "pier-trip" },
+      { kind: "levelAtLeast", level: 5 },
+    ],
     steps: [
       { kind: "unlockArea", areaId: "coral-sea" },
       { kind: "catchFish", fishId: "rainbow-whale", count: 1 },
@@ -1681,6 +1688,7 @@ export const quests: QuestDefinition[] = [
     id: "legend-expedition-launch",
     title: "전설 탐사선 출항",
     helper: "레벨 51이 되면 별모래 외해로 가는 새 항로가 열려요.",
+    requirements: [{ kind: "levelAtLeast", level: 51 }],
     steps: [
       { kind: "reachLevel", level: 51 },
       { kind: "unlockArea", areaId: "starlit-offshore" },
