@@ -9,6 +9,7 @@ const SAVE_SLOT_COUNT = 3;
 const COOKIE_MAX_CHUNKS = 10;
 const LOCAL_SAVE_ENDPOINT = "/api/local-save";
 const chapterIds: ChapterId[] = ["starwhale-expedition", "deep-crown-survey"];
+const memoryStorage = new Map<string, string>();
 
 export type SaveSlotSummary = {
   slotId: number;
@@ -62,27 +63,19 @@ export const createInitialState = (): PlayerState => ({
 });
 
 export function loadGame(): PlayerState {
-  if (typeof localStorage === "undefined") {
-    return createInitialState();
-  }
-
-  const parsed = bestStoredState([parseStoredState(localStorage.getItem(STORAGE_KEY)), ...readLegacyCookieBackups()]);
+  const parsed = bestStoredState([parseStoredState(readStorageItem(STORAGE_KEY)), ...readLegacyCookieBackups()]);
   if (!parsed) {
     return createInitialState();
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+  writeStorageItem(STORAGE_KEY, JSON.stringify(parsed));
   clearLegacyCookieBackups();
   return normalizeStoredState(parsed);
 }
 
 export function saveGame(state: PlayerState): void {
-  if (typeof localStorage === "undefined") {
-    return;
-  }
-
   const stored = { ...state, saveVersion: 7 };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+  writeStorageItem(STORAGE_KEY, JSON.stringify(stored));
   writeServerBackup(STORAGE_KEY, stored);
 }
 
@@ -93,14 +86,10 @@ export function resetGame(): PlayerState {
 }
 
 export function getSaveSlots(): SaveSlotSummary[] {
-  if (typeof localStorage === "undefined") {
-    return emptySaveSlots();
-  }
-
   return Array.from({ length: SAVE_SLOT_COUNT }, (_, index) => {
     const slotId = index + 1;
     const key = slotKey(slotId);
-    const raw = localStorage.getItem(key);
+    const raw = readStorageItem(key);
     const parsed = parseStoredState(raw);
     if (!parsed) {
       return { slotId, empty: true };
@@ -120,39 +109,35 @@ export function getSaveSlots(): SaveSlotSummary[] {
 }
 
 export function saveGameToSlot(slotId: number, state: PlayerState): void {
-  if (typeof localStorage === "undefined" || !isValidSlot(slotId)) {
+  if (!isValidSlot(slotId)) {
     return;
   }
 
   const key = slotKey(slotId);
   const stored = { ...state, saveVersion: 7, savedAt: new Date().toISOString() };
-  localStorage.setItem(key, JSON.stringify(stored));
+  writeStorageItem(key, JSON.stringify(stored));
   writeServerBackup(key, stored);
 }
 
 export function loadGameFromSlot(slotId: number): PlayerState | undefined {
-  if (typeof localStorage === "undefined" || !isValidSlot(slotId)) {
+  if (!isValidSlot(slotId)) {
     return undefined;
   }
 
   const key = slotKey(slotId);
-  const raw = localStorage.getItem(key);
+  const raw = readStorageItem(key);
   const parsed = parseStoredState(raw);
   if (!parsed) {
     return undefined;
   }
 
-  const current = parseStoredState(localStorage.getItem(STORAGE_KEY));
+  const current = parseStoredState(readStorageItem(STORAGE_KEY));
   const state = normalizeStoredState(bestStoredState([current, parsed]) ?? parsed);
   saveGame(state);
   return state;
 }
 
 export async function hydrateGameBackup(): Promise<void> {
-  if (typeof localStorage === "undefined") {
-    return;
-  }
-
   try {
     const response = await fetch(LOCAL_SAVE_ENDPOINT, { method: "GET" });
     if (!response.ok) {
@@ -165,7 +150,7 @@ export async function hydrateGameBackup(): Promise<void> {
     for (const key of keys) {
       const backup = backups[key];
       const bestForKey = bestStoredState([
-        parseStoredState(localStorage.getItem(key)),
+        parseStoredState(readStorageItem(key)),
         backup ? parseStoredState(JSON.stringify(backup)) : undefined,
         readLegacyCookieBackup(key),
       ]);
@@ -175,14 +160,14 @@ export async function hydrateGameBackup(): Promise<void> {
       }
 
       allCandidates.push(bestForKey);
-      localStorage.setItem(key, JSON.stringify(bestForKey));
+      writeStorageItem(key, JSON.stringify(bestForKey));
       writeServerBackup(key, bestForKey);
     }
 
     const bestOverall = bestStoredState(allCandidates);
-    const current = parseStoredState(localStorage.getItem(STORAGE_KEY));
+    const current = parseStoredState(readStorageItem(STORAGE_KEY));
     if (bestOverall && progressScore(bestOverall) > progressScore(current)) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(bestOverall));
+      writeStorageItem(STORAGE_KEY, JSON.stringify(bestOverall));
       writeServerBackup(STORAGE_KEY, bestOverall);
     }
     clearLegacyCookieBackups();
@@ -239,10 +224,6 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   };
 }
 
-function emptySaveSlots(): SaveSlotSummary[] {
-  return Array.from({ length: SAVE_SLOT_COUNT }, (_, index) => ({ slotId: index + 1, empty: true }));
-}
-
 function isValidSlot(slotId: number): boolean {
   return Number.isInteger(slotId) && slotId >= 1 && slotId <= SAVE_SLOT_COUNT;
 }
@@ -253,6 +234,30 @@ function slotKey(slotId: number): string {
 
 function storageKeys(): string[] {
   return [STORAGE_KEY, ...Array.from({ length: SAVE_SLOT_COUNT }, (_, index) => slotKey(index + 1))];
+}
+
+function readStorageItem(key: string): string | null {
+  try {
+    if (typeof localStorage !== "undefined") {
+      return localStorage.getItem(key);
+    }
+  } catch {
+    // Some mobile WebViews can temporarily deny localStorage access. Keep the session playable.
+  }
+
+  return memoryStorage.get(key) ?? null;
+}
+
+function writeStorageItem(key: string, value: string): void {
+  memoryStorage.set(key, value);
+
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(key, value);
+    }
+  } catch {
+    // The in-memory copy lets the current play session continue even if persistent storage fails.
+  }
 }
 
 function parseStoredState(raw: string | null): StoredPlayerState | undefined {

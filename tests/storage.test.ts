@@ -14,6 +14,22 @@ function installLocalStorage() {
   });
 }
 
+function installBlockedLocalStorage() {
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: () => {
+        throw new Error("localStorage blocked");
+      },
+      setItem: () => {
+        throw new Error("localStorage blocked");
+      },
+      removeItem: () => undefined,
+      clear: () => undefined,
+    },
+  });
+}
+
 function installDocumentCookie() {
   const cookieJar = new Map<string, string>();
   Object.defineProperty(globalThis, "document", {
@@ -102,6 +118,23 @@ describe("save slots", () => {
     const loaded = loadGameFromSlot(1);
     expect(loaded?.level).toBe(30);
     expect(loaded?.shells).toBe(2200);
+  });
+
+  it("keeps the current session usable when persistent browser storage is blocked", () => {
+    installBlockedLocalStorage();
+    const state = {
+      ...createInitialState(),
+      level: 18,
+      shells: 1234,
+      collection: { "sunny-minnow": 9 },
+    };
+
+    expect(() => saveGame(state)).not.toThrow();
+    const loaded = loadGame();
+
+    expect(loaded.level).toBe(18);
+    expect(loaded.shells).toBe(1234);
+    expect(loaded.collection["sunny-minnow"]).toBe(9);
   });
 
   it("migrates a higher legacy cookie backup before clearing it", () => {

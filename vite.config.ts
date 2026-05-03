@@ -8,6 +8,16 @@ let localSaveQueue: Promise<void> = Promise.resolve();
 
 export default defineConfig({
   plugins: [localSavePlugin()],
+  build: {
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          phaser: ["phaser"],
+        },
+      },
+    },
+  },
   server: {
     host: "0.0.0.0",
     port: 5175,

@@ -7,12 +7,18 @@
     "dev": "NODE_OPTIONS=--max-http-header-size=262144 vite",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run --dir tests",
-    "preview": "NODE_OPTIONS=--max-http-header-size=262144 vite preview"
+    "preview": "NODE_OPTIONS=--max-http-header-size=262144 vite preview",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android",
+    "android:build:debug": "cd android && ./gradlew :app:assembleDebug"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.1",
     "typescript": "^5.8.3",
     "vite": "^6.3.4",
     "vitest": "^3.1.2"

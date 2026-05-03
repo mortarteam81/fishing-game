@@ -1,0 +1,20 @@
+{
+  "name": "반짝바다 낚시단",
+  "short_name": "반짝바다",
+  "description": "바다 친구를 수집하고 항해 원정을 떠나는 가족형 낚시 RPG",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#bdeedc",
+  "theme_color": "#bdeedc",
+  "categories": ["games", "kids", "entertainment"],
+  "lang": "ko-KR",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
