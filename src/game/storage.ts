@@ -20,6 +20,7 @@ const LOCAL_SAVE_ENDPOINT = "/api/local-save";
 const chapterIds: ChapterId[] = [
   "starwhale-expedition",
   "deep-crown-survey",
+  "outer-mythic-frontier",
   "blue-route-trade",
   "crown-route-restoration",
 ];

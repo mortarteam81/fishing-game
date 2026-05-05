@@ -789,7 +789,149 @@ const expeditionFish: FishDraft[] = expeditionAreaBlueprints.flatMap((area, area
   }));
 });
 
-export const fish: FishDefinition[] = [...baseFish, ...generatedFish, ...legendFish, ...expeditionFish].map(withFishProfile);
+type OuterMythicAreaBlueprint = Pick<AreaDefinition, "id" | "name" | "requiredLevel" | "theme" | "mapTexture" | "flavor" | "chapterId"> & {
+  prefixes: readonly string[];
+  habitatTags: SeaFriendHabitat[];
+  routeText: string;
+  requirements: StoryCondition[];
+};
+
+const outerMythicAreaBlueprints: readonly OuterMythicAreaBlueprint[] = [
+  {
+    id: "starfrost-maelstrom",
+    name: "별서리 난류",
+    chapterId: "outer-mythic-frontier",
+    requiredLevel: 182,
+    theme: "glacier",
+    mapTexture: "map-starfrost-maelstrom",
+    flavor: "심해 왕관성 바깥에서 별빛 얼음 조각과 난류가 천천히 맞물리는 최상위 해역이에요.",
+    prefixes: ["별서리", "빙성", "서광", "푸른서리", "성에", "겨울별", "빙결", "은서리", "찬별", "서리왕관"],
+    habitatTags: ["glacier", "moon", "legend"],
+    routeText: "심해 왕관성 너머의 차가운 별빛 항로가 지도에 새겨졌어요.",
+    requirements: [
+      { kind: "questClaimed", questId: "deep-crown-castle" },
+      { kind: "levelAtLeast", level: 182 },
+      { kind: "storyFlag", flag: "deep-crown-complete" },
+      { kind: "equippedGearRole", role: "mythSeeker", synergyLevel: 2 },
+    ],
+  },
+  {
+    id: "crimson-current-wall",
+    name: "홍조 조류벽",
+    chapterId: "outer-mythic-frontier",
+    requiredLevel: 194,
+    theme: "storm",
+    mapTexture: "map-crimson-current-wall",
+    flavor: "붉은 노을빛 조류가 벽처럼 솟아 고급 탐사선도 조심히 지나야 하는 바다예요.",
+    prefixes: ["홍조", "붉은돛", "노을벽", "산호불", "바람홍", "적운", "홍염", "저녁파도", "붉은별", "노을왕관"],
+    habitatTags: ["storm", "amber", "legend"],
+    routeText: "거친 조류벽 사이에서 아주 좁은 낚시 항로를 찾아냈어요.",
+    requirements: [
+      { kind: "areaDiscovered", areaId: "starfrost-maelstrom" },
+      { kind: "levelAtLeast", level: 194 },
+      { kind: "voyageEventCleared", eventId: "storm-spout" },
+      { kind: "equippedGearRole", role: "stormbreaker", synergyLevel: 2 },
+    ],
+  },
+  {
+    id: "glass-crown-depths",
+    name: "유리왕관 심층",
+    chapterId: "outer-mythic-frontier",
+    requiredLevel: 206,
+    theme: "trench",
+    mapTexture: "map-glass-crown-depths",
+    flavor: "유리처럼 맑은 심층 바닥에 오래된 왕관 무늬가 조용히 빛나는 곳이에요.",
+    prefixes: ["유리왕관", "심층", "투명관", "푸른심도", "수정문", "깊은유리", "왕관빛", "해연거울", "투명별", "심연왕관"],
+    habitatTags: ["trench", "ancient", "legend"],
+    routeText: "유리 심층의 반사광이 오래된 왕관 항로를 가리켰어요.",
+    requirements: [
+      { kind: "areaDiscovered", areaId: "crimson-current-wall" },
+      { kind: "levelAtLeast", level: 206 },
+      { kind: "voyageEventCleared", eventId: "deep-shadow" },
+      { kind: "equippedGearRole", role: "deepExplorer", synergyLevel: 2 },
+    ],
+  },
+  {
+    id: "polar-aurora-dome",
+    name: "극야 오로라돔",
+    chapterId: "outer-mythic-frontier",
+    requiredLevel: 218,
+    theme: "aurora",
+    mapTexture: "map-polar-aurora-dome",
+    flavor: "밤하늘과 수면이 둥근 오로라 지붕처럼 이어지는 조용한 외해예요.",
+    prefixes: ["극야", "오로라돔", "빛지붕", "초록밤", "극광막", "환상돔", "밤유리", "하늘막", "빛고리", "극광왕관"],
+    habitatTags: ["aurora", "moon", "legend"],
+    routeText: "오로라 막이 잠시 열리며 돔 안쪽의 정박 지점이 드러났어요.",
+    requirements: [
+      { kind: "areaDiscovered", areaId: "glass-crown-depths" },
+      { kind: "levelAtLeast", level: 218 },
+      { kind: "voyageEventCleared", eventId: "current-breakthrough" },
+      { kind: "collectedVariants", count: 8 },
+    ],
+  },
+  {
+    id: "first-sparkle-sea",
+    name: "태초 윤슬해",
+    chapterId: "outer-mythic-frontier",
+    requiredLevel: 232,
+    theme: "aurora",
+    mapTexture: "map-first-sparkle-sea",
+    flavor: "반짝바다의 가장 오래된 윤슬이 남아 있다는, 최정상 선장들의 마지막 소문이에요.",
+    prefixes: ["태초", "첫윤슬", "오래된빛", "원초", "새벽왕관", "첫물결", "고대윤슬", "별기원", "왕관윤슬", "첫바다"],
+    habitatTags: ["aurora", "ancient", "legend"],
+    routeText: "가장 오래된 윤슬이 배 앞에서 길게 이어지며 마지막 외해가 열렸어요.",
+    requirements: [
+      { kind: "areaDiscovered", areaId: "polar-aurora-dome" },
+      { kind: "levelAtLeast", level: 232 },
+      { kind: "researchRank", fishId: "deep-crown-castle-abyss-mythic-nudibranch", rank: 3 },
+      { kind: "equippedGearRole", role: "mutationHunter", synergyLevel: 2 },
+    ],
+  },
+];
+
+const outerMythicSpecies = [
+  { slug: "veil-ray", name: "베일가오리", rarity: "mythic", family: "fish", size: "large", behavior: ["drifting", "erratic"], base: 2680, xp: 1320, weight: 4 },
+  { slug: "oracle-clam", name: "예언조개", rarity: "mythic", family: "mollusk", size: "medium", behavior: ["steady", "glowing"], base: 2760, xp: 1360, weight: 4 },
+  { slug: "lantern-eel", name: "등불장어", rarity: "mythic", family: "deep", size: "large", behavior: ["nocturnal", "glowing"], base: 2840, xp: 1400, weight: 3 },
+  { slug: "mosaic-crab", name: "모자이크게", rarity: "mythic", family: "crustacean", size: "medium", behavior: ["heavy", "steady"], base: 2920, xp: 1440, weight: 3 },
+  { slug: "skywhale", name: "하늘고래", rarity: "legendary", family: "whale", size: "giant", behavior: ["drifting", "ancient"], base: 3820, xp: 1780, weight: 2 },
+  { slug: "crown-turtle", name: "왕관거북", rarity: "legendary", family: "reptile", size: "giant", behavior: ["heavy", "steady"], base: 3960, xp: 1840, weight: 2 },
+  { slug: "spirit-jelly", name: "숨결해파리", rarity: "legendary", family: "jelly", size: "large", behavior: ["drifting", "glowing"], base: 4080, xp: 1900, weight: 2 },
+  { slug: "star-drifter", name: "별유영어", rarity: "legendary", family: "spirit", size: "medium", behavior: ["drifting", "glowing"], base: 4210, xp: 1960, weight: 2 },
+  { slug: "ancient-nudibranch", name: "고대 갯민숭달팽이", rarity: "ancient", family: "mollusk", size: "small", behavior: ["shy", "ancient", "glowing"], base: 5600, xp: 2480, weight: 1 },
+  { slug: "prime-whale", name: "태초고래", rarity: "ancient", family: "whale", size: "giant", behavior: ["drifting", "ancient", "glowing"], base: 6200, xp: 2720, weight: 1 },
+] as const satisfies ReadonlyArray<{
+  slug: string;
+  name: string;
+  rarity: FishDefinition["rarity"];
+  family: SeaFriendFamily;
+  size: SeaFriendSize;
+  behavior: readonly SeaFriendBehavior[];
+  base: number;
+  xp: number;
+  weight: number;
+}>;
+
+const outerMythicFish: FishDraft[] = outerMythicAreaBlueprints.flatMap((area, areaIndex) =>
+  outerMythicSpecies.map((species, speciesIndex) => ({
+    id: `${area.id}-${species.slug}`,
+    name: `${area.prefixes[speciesIndex]} ${species.name}`,
+    chapterId: area.chapterId,
+    areaIds: [area.id],
+    rarity: species.rarity,
+    family: species.family,
+    habitatTags: area.habitatTags,
+    size: species.size,
+    behaviorTags: [...species.behavior],
+    baseShells: species.base + areaIndex * 420 + speciesIndex * 55,
+    xp: species.xp + areaIndex * 180 + speciesIndex * 24,
+    spawnWeight: Math.max(1, species.weight - Math.floor(areaIndex / 2)),
+    funFact: `${area.name}의 극히 드문 물결에서만 기록되는 고레벨 바다 친구예요.`,
+    assetKey: `fish-${area.id}-${species.slug}`,
+  })),
+);
+
+export const fish: FishDefinition[] = [...baseFish, ...generatedFish, ...legendFish, ...expeditionFish, ...outerMythicFish].map(withFishProfile);
 
 const baseAreas: AreaDefinition[] = [
   {
@@ -957,7 +1099,32 @@ const expeditionAreas: AreaDefinition[] = expeditionAreaBlueprints.map((area) =>
   },
 }));
 
-export const areas: AreaDefinition[] = [...baseAreas, ...generatedAreas, ...legendAreas, ...hiddenAreas, ...expeditionAreas];
+const outerMythicAreas: AreaDefinition[] = outerMythicAreaBlueprints.map((area) => ({
+  id: area.id,
+  name: area.name,
+  chapterId: area.chapterId,
+  requiredLevel: area.requiredLevel,
+  fishIds: outerMythicFish.filter((entry) => entry.areaIds.includes(area.id)).map((entry) => entry.id),
+  backgroundKey: `bg-${area.id}`,
+  theme: area.theme,
+  mapTexture: area.mapTexture,
+  flavor: area.flavor,
+  hidden: true,
+  weatherPool:
+    area.theme === "glacier"
+      ? ["fog", "moonTide", "aurora"]
+      : area.theme === "storm"
+        ? ["storm", "aurora", "rain"]
+        : ["aurora", "moonTide", "storm"],
+  route: {
+    discoveryLevel: area.requiredLevel,
+    discoveryHint: `${area.name} 바깥쪽에서 아주 희미한 고레벨 소문이 들려요.`,
+    revealText: area.routeText,
+    requirements: area.requirements,
+  },
+}));
+
+export const areas: AreaDefinition[] = [...baseAreas, ...generatedAreas, ...legendAreas, ...hiddenAreas, ...expeditionAreas, ...outerMythicAreas];
 
 const baseItems: ItemDefinition[] = [
   {

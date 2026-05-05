@@ -74,6 +74,7 @@ export type WeatherDefinition = {
 export type ChapterId =
   | "starwhale-expedition"
   | "deep-crown-survey"
+  | "outer-mythic-frontier"
   | "blue-route-trade"
   | "crown-route-restoration";
 

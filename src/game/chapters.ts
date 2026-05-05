@@ -3,6 +3,7 @@ import type { ChapterId } from "./types";
 export const chapterOrder: ChapterId[] = [
   "starwhale-expedition",
   "deep-crown-survey",
+  "outer-mythic-frontier",
   "blue-route-trade",
   "crown-route-restoration",
 ];
@@ -27,6 +28,12 @@ export const chapterMeta: Record<
     shortLabel: "왕관",
     description: "고대 등불과 검은 진주빛 심연을 지나 심해 왕관성을 찾아요.",
     color: 0x88b7c9,
+  },
+  "outer-mythic-frontier": {
+    label: "환상 외해 개척",
+    shortLabel: "외해",
+    description: "심해 왕관성 너머의 극희귀 해역에서 오래된 바다 친구를 기록해요.",
+    color: 0x9be7c6,
   },
   "blue-route-trade": {
     label: "푸른항로 교역 원정",

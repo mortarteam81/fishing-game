@@ -31,6 +31,16 @@ const rarityRank: Record<FishDefinition["rarity"], number> = {
   ancient: 7,
 };
 
+const rarityTimingPenalty: Record<FishDefinition["rarity"], number> = {
+  common: 0,
+  uncommon: 0.01,
+  rare: 0.02,
+  epic: 0.035,
+  mythic: 0.055,
+  legendary: 0.08,
+  ancient: 0.11,
+};
+
 export function startFishing(areaId: string, state: PlayerState, random = Math.random): FishingAttempt {
   const area = areas.find((entry) => entry.id === areaId) ?? areas[0];
   const weather = getAreaWeather(area, state);
@@ -57,7 +67,7 @@ export function startFishing(areaId: string, state: PlayerState, random = Math.r
     weather,
     biteDelayMs: Math.max(360, Math.round((750 + Math.floor(random() * 900)) * (1 - getLureSpeed(state) - (weather.effect?.lureSpeed ?? 0)))),
     targetCenter: 0.5,
-    targetWidth: Math.max(0.18, Math.min(0.54, 0.24 + getRodEase(state) + (weather.effect?.catchEase ?? 0))),
+    targetWidth: Math.max(0.16, Math.min(0.54, 0.24 + getRodEase(state) + (weather.effect?.catchEase ?? 0)) - rarityTimingPenalty[chosen.rarity]),
   };
 }
 

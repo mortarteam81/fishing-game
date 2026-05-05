@@ -6,6 +6,15 @@ import { portVisuals } from "../src/game/portVisuals";
 import { voyageEvents } from "../src/game/voyageEvents";
 import { weatherDefinitions } from "../src/game/weather";
 
+const outerMythicChapterId = "outer-mythic-frontier";
+const outerMythicAreaIds = [
+  "starfrost-maelstrom",
+  "crimson-current-wall",
+  "glass-crown-depths",
+  "polar-aurora-dome",
+  "first-sparkle-sea",
+] as const;
+
 describe("content data", () => {
   it("keeps catchable sea creatures wired to valid areas", () => {
     const fishIds = new Set(fish.map((entry) => entry.id));
@@ -14,11 +23,13 @@ describe("content data", () => {
     const portIds = new Set(ports.map((port) => port.id));
     const tradeGoodIds = new Set(tradeGoods.map((good) => good.id));
 
-    expect(fish).toHaveLength(179);
-    expect(areas).toHaveLength(31);
+    expect(fish).toHaveLength(229);
+    expect(areas).toHaveLength(36);
     expect(fishIds.size).toBe(fish.length);
-    expect(areas.filter((area) => area.chapterId)).toHaveLength(10);
-    expect(fish.filter((entry) => entry.chapterId)).toHaveLength(50);
+    expect(areas.filter((area) => area.chapterId && area.chapterId !== outerMythicChapterId)).toHaveLength(10);
+    expect(fish.filter((entry) => entry.chapterId && entry.chapterId !== outerMythicChapterId)).toHaveLength(50);
+    expect(areas.filter((area) => area.chapterId === outerMythicChapterId)).toHaveLength(5);
+    expect(fish.filter((entry) => entry.chapterId === outerMythicChapterId)).toHaveLength(50);
 
     for (const area of areas) {
       expect(area.fishIds.length).toBeGreaterThan(0);
@@ -52,6 +63,32 @@ describe("content data", () => {
         expect(areaIds.has(areaId)).toBe(true);
         expect(areas.find((area) => area.id === areaId)?.fishIds).toContain(entry.id);
       }
+    }
+  });
+
+  it("adds a high-level outer mythic frontier with rare low-weight catches", () => {
+    const outerAreas = areas.filter((area) => outerMythicAreaIds.includes(area.id as (typeof outerMythicAreaIds)[number]));
+    const outerFish = fish.filter((entry) => entry.chapterId === outerMythicChapterId);
+    const outerAreaIdSet = new Set(outerMythicAreaIds);
+    const rarityCounts = outerFish.reduce<Record<string, number>>((counts, entry) => {
+      counts[entry.rarity] = (counts[entry.rarity] ?? 0) + 1;
+      return counts;
+    }, {});
+
+    expect(outerAreas.map((area) => area.requiredLevel)).toEqual([182, 194, 206, 218, 232]);
+    expect(outerAreas.every((area) => area.hidden && area.route?.discoveryLevel === area.requiredLevel)).toBe(true);
+    expect(outerAreas.every((area) => area.fishIds.length === 10)).toBe(true);
+    expect(outerFish).toHaveLength(50);
+    expect(rarityCounts).toMatchObject({ mythic: 20, legendary: 20, ancient: 10 });
+
+    for (const entry of outerFish) {
+      expect(entry.areaIds).toHaveLength(1);
+      expect(outerAreaIdSet.has(entry.areaIds[0] as (typeof outerMythicAreaIds)[number])).toBe(true);
+      expect(entry.spawnWeight).toBeGreaterThanOrEqual(1);
+      expect(entry.spawnWeight).toBeLessThanOrEqual(entry.rarity === "mythic" ? 4 : entry.rarity === "legendary" ? 2 : 1);
+      expect(["mythic", "legendary", "ancient"]).toContain(entry.rarity);
+      expect(entry.habitatTags).toEqual(expect.arrayContaining(["legend"]));
+      expect(entry.chapterId).toBe(outerMythicChapterId);
     }
   });
 

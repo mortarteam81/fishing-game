@@ -67,4 +67,21 @@ describe("fishing loop", () => {
     expect(result.success).toBe(true);
     expect(result.shells).toBeGreaterThan(ancientFriend!.baseShells * 2);
   });
+
+  it("keeps ancient outer-frontier catches demanding even with top gear", () => {
+    const topGearState = {
+      ...createInitialState(),
+      level: 232,
+      equippedRodId: "legend-voyager-rod",
+      equippedBoatId: "aurora-regalia",
+      equippedBaitId: "ancient-glow-bait",
+      equippedBoatCosmeticId: "legend-fleet-flag",
+    };
+    const ancientAttempt = startFishing("first-sparkle-sea", topGearState, () => 0.99);
+    const commonAttempt = startFishing("sunny-beach", topGearState, () => 0);
+
+    expect(ancientAttempt.fish.rarity).toBe("ancient");
+    expect(ancientAttempt.targetWidth).toBeLessThan(commonAttempt.targetWidth);
+    expect(ancientAttempt.targetWidth).toBeLessThanOrEqual(0.43);
+  });
 });

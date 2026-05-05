@@ -48,7 +48,7 @@ type OceanLifeSpot = {
 };
 
 const WORLD_WIDTH = 3180;
-const WORLD_HEIGHT = 3180;
+const WORLD_HEIGHT = 3400;
 
 const hotspotLayout = [
   [430, 1280],
@@ -72,6 +72,21 @@ const hotspotLayout = [
   [420, 320],
   [2320, 760],
   [1110, 1660],
+  [520, 2040],
+  [1040, 2180],
+  [1580, 2060],
+  [2140, 2180],
+  [2700, 2040],
+  [560, 2620],
+  [1120, 2760],
+  [1680, 2620],
+  [2240, 2760],
+  [2780, 2620],
+  [520, 3040],
+  [1120, 3060],
+  [1680, 3020],
+  [2240, 3060],
+  [2780, 3020],
 ] as const;
 
 const hotspots: Hotspot[] = areas.map((area, index) => {
@@ -146,6 +161,11 @@ const oceanLifeConfig: readonly OceanLifeSpot[] = [
   { fishId: "silent-throne-reef-throne-velvet-turtle", x: 1680, y: 2760, scale: 0.72, depth: 8, alpha: 0.72, driftX: -28, driftY: -12, duration: 3600, flipX: true },
   { fishId: "ancient-lantern-stairs-shadow-mosaic-crab", x: 2240, y: 2920, scale: 0.62, depth: 8, alpha: 0.72, driftX: 24, driftY: -12, duration: 3200 },
   { fishId: "deep-crown-castle-abyss-mythic-nudibranch", x: 2780, y: 2820, scale: 0.7, depth: 8, alpha: 0.76, driftX: -30, driftY: -18, duration: 3400, flipX: true },
+  { fishId: "starfrost-maelstrom-prime-whale", x: 540, y: 3070, scale: 0.92, depth: 8, alpha: 0.76, driftX: 56, driftY: -22, duration: 4300 },
+  { fishId: "crimson-current-wall-spirit-jelly", x: 1120, y: 3100, scale: 0.66, depth: 8, alpha: 0.72, driftX: -26, driftY: -20, duration: 3300, flipX: true },
+  { fishId: "glass-crown-depths-ancient-nudibranch", x: 1680, y: 3060, scale: 0.68, depth: 8, alpha: 0.74, driftX: 24, driftY: -16, duration: 3400 },
+  { fishId: "polar-aurora-dome-skywhale", x: 2240, y: 3105, scale: 0.9, depth: 8, alpha: 0.76, driftX: -46, driftY: -22, duration: 4200, flipX: true },
+  { fishId: "first-sparkle-sea-prime-whale", x: 2780, y: 3060, scale: 0.94, depth: 8, alpha: 0.78, driftX: 58, driftY: -24, duration: 4400 },
 ];
 
 export class OceanScene extends Phaser.Scene {
