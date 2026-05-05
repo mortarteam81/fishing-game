@@ -359,40 +359,47 @@ export class HarborScene extends Phaser.Scene {
   }
 
   private addNavigation() {
-    addTextButton(this, 390, 265, "도감", () => this.scene.start("Collection"), {
-      width: 112,
-      fontSize: 18,
+    addTextButton(this, 336, 265, "도감", () => this.scene.start("Collection"), {
+      width: 96,
+      fontSize: 16,
       fill: PALETTE.seaFoam,
       iconKey: "icon-collection",
-      iconScale: 0.32,
+      iconScale: 0.28,
     });
-    addTextButton(this, 512, 265, "교환소", () => this.scene.start("Exchange"), {
-      width: 112,
-      fontSize: 17,
+    addTextButton(this, 444, 265, "교환소", () => this.scene.start("Exchange"), {
+      width: 96,
+      fontSize: 15,
       fill: 0xffc2d1,
       iconKey: "icon-shop",
-      iconScale: 0.32,
+      iconScale: 0.28,
     });
-    addTextButton(this, 634, 265, "퀘스트", () => this.scene.start("Quest"), {
-      width: 112,
-      fontSize: 17,
+    addTextButton(this, 552, 265, "항구망", () => this.scene.start("Port"), {
+      width: 96,
+      fontSize: 15,
+      fill: PALETTE.butter,
+      iconKey: "icon-map",
+      iconScale: 0.28,
+    });
+    addTextButton(this, 660, 265, "퀘스트", () => this.scene.start("Quest"), {
+      width: 96,
+      fontSize: 15,
       fill: PALETTE.lavender,
       iconKey: "icon-quest",
-      iconScale: 0.32,
+      iconScale: 0.28,
     });
-    addTextButton(this, 756, 265, "선장", () => this.scene.start("Character"), {
-      width: 112,
-      fontSize: 18,
+    addTextButton(this, 768, 265, "선장", () => this.scene.start("Character"), {
+      width: 96,
+      fontSize: 16,
       fill: PALETTE.butter,
       iconKey: "icon-harbor",
-      iconScale: 0.32,
+      iconScale: 0.28,
     });
-    addTextButton(this, 878, 265, "저장", () => this.scene.start("Save"), {
-      width: 112,
-      fontSize: 18,
+    addTextButton(this, 876, 265, "저장", () => this.scene.start("Save"), {
+      width: 96,
+      fontSize: 16,
       fill: PALETTE.seaFoam,
       iconKey: "icon-map",
-      iconScale: 0.32,
+      iconScale: 0.28,
     });
   }
 }

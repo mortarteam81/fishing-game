@@ -71,7 +71,11 @@ export type WeatherDefinition = {
   };
 };
 
-export type ChapterId = "starwhale-expedition" | "deep-crown-survey";
+export type ChapterId =
+  | "starwhale-expedition"
+  | "deep-crown-survey"
+  | "blue-route-trade"
+  | "crown-route-restoration";
 
 export type VoyageEventId =
   | "current-breakthrough"
@@ -152,12 +156,32 @@ export type StoryCondition =
   | {
       kind: "voyageEventCleared";
       eventId: VoyageEventId;
+    }
+  | {
+      kind: "portVisited";
+      portId: string;
+    }
+  | {
+      kind: "portReputationAtLeast";
+      portId: string;
+      reputation: number;
+    }
+  | {
+      kind: "tradeProfitAtLeast";
+      profit: number;
+    }
+  | {
+      kind: "completeTradeRoute";
+      fromPortId: string;
+      toPortId: string;
+      count: number;
     };
 
 export type StoryRewards = {
   shells?: number;
   xp?: number;
   itemId?: string;
+  portReputation?: Array<{ portId: string; amount: number }>;
 };
 
 export type StoryEffect = {
@@ -236,6 +260,10 @@ export type ItemDefinition = {
     rarityBoosts?: Partial<Record<Rarity, number>>;
     familyBoost?: SeaFriendFamily;
     habitatBoost?: SeaFriendHabitat;
+    cargoCapacity?: number;
+    tradeBonus?: number;
+    routeRiskReduction?: number;
+    marketInsight?: number;
   };
 };
 
@@ -309,6 +337,37 @@ export type QuestStep =
   | {
       kind: "discoverArea";
       areaId: string;
+    }
+  | {
+      kind: "portVisited";
+      portId: string;
+    }
+  | {
+      kind: "portReputationAtLeast";
+      portId: string;
+      reputation: number;
+    }
+  | {
+      kind: "tradeProfitAtLeast";
+      profit: number;
+    }
+  | {
+      kind: "deliverTradeGood";
+      goodId: string;
+      portId: string;
+      quantity: number;
+    }
+  | {
+      kind: "sellTradeGood";
+      goodId: string;
+      portId: string;
+      quantity: number;
+    }
+  | {
+      kind: "completeTradeRoute";
+      fromPortId: string;
+      toPortId: string;
+      count: number;
     };
 
 export type QuestDefinition = {
@@ -344,7 +403,7 @@ export type QuestProgress = {
 };
 
 export type PlayerState = {
-  saveVersion: 7;
+  saveVersion: 8;
   shells: number;
   level: number;
   xp: number;
@@ -368,7 +427,78 @@ export type PlayerState = {
   questProgress: Record<string, QuestProgress>;
   storyFlags: Record<string, boolean>;
   choiceHistory: Record<string, string>;
+  currentPortId: string;
+  visitedPortIds: string[];
+  cargoHold: CargoLot[];
+  portReputation: Record<string, number>;
+  tradeLedger: TradeLedger;
+  marketState: MarketState;
+  tradeRouteHistory: Record<string, TradeRouteRecord>;
   muted: boolean;
+};
+
+export type PortService = "market" | "shipyard" | "research" | "quests" | "inn";
+
+export type PortDefinition = {
+  id: string;
+  name: string;
+  region: string;
+  requiredLevel: number;
+  connectedAreaIds: string[];
+  specialtyGoodIds: string[];
+  demandGoodIds: string[];
+  services: PortService[];
+  theme: AreaTheme;
+  description: string;
+  requirements?: StoryCondition[];
+  position: { x: number; y: number };
+  reputationRewards: Array<{ reputation: number; label: string; shells?: number; itemId?: string }>;
+};
+
+export type TradeGoodCategory = "food" | "craft" | "shipPart" | "research" | "festival" | "relic";
+
+export type TradeGoodDefinition = {
+  id: string;
+  name: string;
+  category: TradeGoodCategory;
+  basePrice: number;
+  volume: number;
+  originPortId: string;
+  demandPortIds: string[];
+  volatility: number;
+  rarity: Rarity;
+  unlockConditions?: StoryCondition[];
+};
+
+export type CargoLot = {
+  goodId: string;
+  quantity: number;
+  averageCost: number;
+  originPortId: string;
+  condition: number;
+};
+
+export type TradeLedger = {
+  totalProfit: number;
+  totalRevenue: number;
+  totalSpend: number;
+  completedRoutes: number;
+  deliveredGoods: Record<string, number>;
+  soldGoodsByPort: Record<string, number>;
+  bestProfit: number;
+};
+
+export type MarketState = {
+  day: number;
+  seed: number;
+  featuredGoodIdsByPort: Record<string, string>;
+  portMoodById: Record<string, "surplus" | "steady" | "shortage" | "festival">;
+};
+
+export type TradeRouteRecord = {
+  completed: number;
+  bestProfit: number;
+  lastCompletedDay: number;
 };
 
 export type FishingAttempt = {

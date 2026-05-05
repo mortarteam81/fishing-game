@@ -1,4 +1,13 @@
 import { areas, quests } from "./content";
+import {
+  createInitialMarketState,
+  defaultCurrentPortId,
+  normalizeCargoHold,
+  normalizeMarketState,
+  normalizePortReputation,
+  normalizeTradeLedger,
+  normalizeTradeRouteHistory,
+} from "./commerce";
 import { normalizeAffinity, normalizeCompanions, normalizeEquippedCompanions, STARTER_COMPANION_ID } from "./companions";
 import { seedResearchRecord } from "./research";
 import type { CaptainStyle, ChapterId, DexResearchRecord, PlayerState, VariantCollection, VoyageEventId } from "./types";
@@ -8,7 +17,12 @@ const SAVE_SLOT_PREFIX = "banjjakbada-save-slot-";
 const SAVE_SLOT_COUNT = 3;
 const COOKIE_MAX_CHUNKS = 10;
 const LOCAL_SAVE_ENDPOINT = "/api/local-save";
-const chapterIds: ChapterId[] = ["starwhale-expedition", "deep-crown-survey"];
+const chapterIds: ChapterId[] = [
+  "starwhale-expedition",
+  "deep-crown-survey",
+  "blue-route-trade",
+  "crown-route-restoration",
+];
 const memoryStorage = new Map<string, string>();
 
 export type SaveSlotSummary = {
@@ -36,7 +50,7 @@ export const defaultCaptain: CaptainStyle = {
 };
 
 export const createInitialState = (): PlayerState => ({
-  saveVersion: 7,
+  saveVersion: 8,
   shells: 35,
   level: 1,
   xp: 0,
@@ -59,6 +73,13 @@ export const createInitialState = (): PlayerState => ({
   ),
   storyFlags: {},
   choiceHistory: {},
+  currentPortId: defaultCurrentPortId(),
+  visitedPortIds: [defaultCurrentPortId()],
+  cargoHold: [],
+  portReputation: normalizePortReputation(undefined),
+  tradeLedger: normalizeTradeLedger(undefined),
+  marketState: createInitialMarketState(),
+  tradeRouteHistory: {},
   muted: false,
 });
 
@@ -74,7 +95,7 @@ export function loadGame(): PlayerState {
 }
 
 export function saveGame(state: PlayerState): void {
-  const stored = { ...state, saveVersion: 7 };
+  const stored = { ...state, saveVersion: 8 };
   writeStorageItem(STORAGE_KEY, JSON.stringify(stored));
   writeServerBackup(STORAGE_KEY, stored);
 }
@@ -114,7 +135,7 @@ export function saveGameToSlot(slotId: number, state: PlayerState): void {
   }
 
   const key = slotKey(slotId);
-  const stored = { ...state, saveVersion: 7, savedAt: new Date().toISOString() };
+  const stored = { ...state, saveVersion: 8, savedAt: new Date().toISOString() };
   writeStorageItem(key, JSON.stringify(stored));
   writeServerBackup(key, stored);
 }
@@ -189,7 +210,7 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   return {
     ...initial,
     ...parsed,
-    saveVersion: 7,
+    saveVersion: 8,
     activeChapterId: parsed.activeChapterId,
     chapterProgress: normalizeChapterProgress(parsed.chapterProgress),
     voyageEventHistory: normalizeVoyageEventHistory(parsed.voyageEventHistory),
@@ -221,6 +242,13 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
       ...initial.choiceHistory,
       ...(parsed.choiceHistory ?? {}),
     },
+    currentPortId: parsed.currentPortId ?? initial.currentPortId,
+    visitedPortIds: Array.from(new Set([initial.currentPortId, ...(parsed.visitedPortIds ?? [])])),
+    cargoHold: normalizeCargoHold(parsed.cargoHold),
+    portReputation: normalizePortReputation(parsed.portReputation),
+    tradeLedger: normalizeTradeLedger(parsed.tradeLedger),
+    marketState: normalizeMarketState(parsed.marketState),
+    tradeRouteHistory: normalizeTradeRouteHistory(parsed.tradeRouteHistory),
   };
 }
 
@@ -274,7 +302,8 @@ function parseStoredState(raw: string | null): StoredPlayerState | undefined {
       parsed.saveVersion !== 4 &&
       parsed.saveVersion !== 5 &&
       parsed.saveVersion !== 6 &&
-      parsed.saveVersion !== 7
+      parsed.saveVersion !== 7 &&
+      parsed.saveVersion !== 8
     ) {
       return undefined;
     }
@@ -327,6 +356,10 @@ function progressScore(value: StoredPlayerState | undefined): number {
     Object.values(value.affinity ?? {}).reduce((sum, affinity) => sum + Math.max(0, affinity ?? 0), 0) * 2 +
     Object.values(value.voyageEventHistory ?? {}).reduce((sum, record) => sum + (record?.successes ?? 0) * 180 + (record?.attempts ?? 0) * 20, 0) +
     Object.values(value.chapterProgress ?? {}).reduce((sum, record) => sum + (record?.score ?? 0), 0) +
+    (value.tradeLedger?.totalProfit ?? 0) +
+    (value.tradeLedger?.completedRoutes ?? 0) * 250 +
+    Object.values(value.portReputation ?? {}).reduce((sum, reputation) => sum + Math.max(0, reputation ?? 0), 0) * 14 +
+    (value.visitedPortIds?.length ?? 0) * 160 +
     (value.discoveredAreaIds?.length ?? 0) * 120 +
     (value.ownedItemIds?.length ?? 0) * 20 +
     (value.unlockedAreaIds?.length ?? 0) * 20 +

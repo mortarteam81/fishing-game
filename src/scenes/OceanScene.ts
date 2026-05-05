@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { addPlayerBoat, boatWakeTint } from "../game/boat";
+import { ports } from "../game/commerceContent";
+import { isPortUnlocked } from "../game/commerce";
 import { addCompanionFollowers } from "../game/companionVisuals";
 import { areas, fish } from "../game/content";
 import { fixedContentOffset, fixedScreenCenterX, sceneGameWidth } from "../game/layout";
@@ -352,7 +354,31 @@ export class OceanScene extends Phaser.Scene {
       });
     }
 
+    this.addPortObjects();
     this.addDecorativeSailRoutes();
+  }
+
+  private addPortObjects() {
+    for (const port of ports.filter((entry) => isPortUnlocked(this.state, entry))) {
+      const marker = this.add.container(port.position.x, port.position.y).setDepth(9);
+      marker.add(this.add.circle(0, 0, 26, PALETTE.butter, 0.92).setStrokeStyle(4, PALETTE.ink, 0.72));
+      marker.add(this.add.rectangle(0, 4, 34, 18, PALETTE.paper, 0.95).setStrokeStyle(2, PALETTE.ink, 0.45));
+      marker.add(this.add.triangle(0, -24, 0, -20, -16, 8, 16, 8, PALETTE.coral, 0.95).setStrokeStyle(2, PALETTE.ink, 0.4));
+      this.add
+        .text(port.position.x, port.position.y + 48, port.name, {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "18px",
+          fontStyle: "900",
+          color: TEXT.primary,
+          backgroundColor: "rgba(255,251,239,0.76)",
+          padding: { x: 9, y: 5 },
+        })
+        .setOrigin(0.5)
+        .setDepth(10);
+      marker.setSize(74, 74);
+      marker.setInteractive({ useHandCursor: true });
+      marker.on("pointerdown", () => this.scene.start("Port", { portId: port.id }));
+    }
   }
 
   private addDecorativeSailRoutes() {
@@ -504,6 +530,19 @@ export class OceanScene extends Phaser.Scene {
         1,
       );
       dot.setStrokeStyle(2, PALETTE.ink, 0.35);
+      map.add(dot);
+    }
+
+    for (const port of ports.filter((entry) => isPortUnlocked(this.state, entry))) {
+      const dot = this.add.rectangle(
+        -72 + (port.position.x / WORLD_WIDTH) * 144,
+        -28 + (port.position.y / WORLD_HEIGHT) * 70,
+        7,
+        7,
+        PALETTE.coral,
+        0.96,
+      );
+      dot.setStrokeStyle(1, PALETTE.ink, 0.35);
       map.add(dot);
     }
 

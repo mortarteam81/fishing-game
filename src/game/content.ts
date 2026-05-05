@@ -14,6 +14,7 @@ import type {
   VoyageEventId,
 } from "./types";
 import { decorateGearItem } from "./gearRoles";
+import { tradeQuests } from "./commerceContent";
 
 type FishDraft = Omit<FishDefinition, "family" | "habitatTags" | "size" | "behaviorTags"> &
   Partial<Pick<FishDefinition, "family" | "habitatTags" | "size" | "behaviorTags">>;
@@ -1797,6 +1798,7 @@ export const quests: QuestDefinition[] = [
     rewards: { shells: 9600, xp: 2300, itemId: "deepcrown-myth-flag" },
     effects: { setFlags: ["deep-crown-complete"] },
   },
+  ...tradeQuests,
 ];
 
 function withFishProfile(fish: FishDraft): FishDefinition {

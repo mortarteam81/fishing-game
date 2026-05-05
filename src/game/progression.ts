@@ -1,4 +1,5 @@
 import { areas, fish, getFish, getItem, getStoryChoice, items, quests, storyChoices } from "./content";
+import { addPortReputation, deliveredGoodKey, getPort, getTradeGood, routeKey } from "./commerce";
 import {
   applyCatchCompanionProgress,
   equipCompanion as equipCompanionState,
@@ -361,6 +362,17 @@ export function stepProgress(state: PlayerState, step: QuestStep): number {
       return Math.min(state.affinity[step.fishId] ?? 0, step.affinity);
     case "discoverArea":
       return state.discoveredAreaIds.includes(step.areaId) || state.unlockedAreaIds.includes(step.areaId) ? 1 : 0;
+    case "portVisited":
+      return state.visitedPortIds.includes(step.portId) ? 1 : 0;
+    case "portReputationAtLeast":
+      return Math.min(state.portReputation[step.portId] ?? 0, step.reputation);
+    case "tradeProfitAtLeast":
+      return Math.min(state.tradeLedger.totalProfit, step.profit);
+    case "deliverTradeGood":
+    case "sellTradeGood":
+      return Math.min(state.tradeLedger.deliveredGoods[deliveredGoodKey(step.goodId, step.portId)] ?? 0, step.quantity);
+    case "completeTradeRoute":
+      return Math.min(state.tradeRouteHistory[routeKey(step.fromPortId, step.toPortId)]?.completed ?? 0, step.count);
   }
 }
 
@@ -376,6 +388,7 @@ export function stepTarget(step: QuestStep): number {
     case "unlockArea":
     case "clearVoyageEvent":
     case "discoverArea":
+    case "portVisited":
       return 1;
     case "researchRank":
       return step.rank;
@@ -384,6 +397,15 @@ export function stepTarget(step: QuestStep): number {
       return step.count;
     case "raiseCompanionAffinity":
       return step.affinity;
+    case "portReputationAtLeast":
+      return step.reputation;
+    case "tradeProfitAtLeast":
+      return step.profit;
+    case "deliverTradeGood":
+    case "sellTradeGood":
+      return step.quantity;
+    case "completeTradeRoute":
+      return step.count;
   }
 }
 
@@ -413,6 +435,17 @@ export function stepLabel(step: QuestStep): string {
       return `${getFish(step.fishId)?.name ?? "동료"} 친밀도 ${step.affinity}`;
     case "discoverArea":
       return `${areas.find((area) => area.id === step.areaId)?.name ?? "새 해역"} 발견`;
+    case "portVisited":
+      return `${getPort(step.portId)?.name ?? "항구"} 방문`;
+    case "portReputationAtLeast":
+      return `${getPort(step.portId)?.name ?? "항구"} 평판 ${step.reputation}`;
+    case "tradeProfitAtLeast":
+      return `교역 순이익 ${step.profit} 달성`;
+    case "deliverTradeGood":
+    case "sellTradeGood":
+      return `${getTradeGood(step.goodId)?.name ?? "교역품"} ${step.quantity}개 납품`;
+    case "completeTradeRoute":
+      return `${getPort(step.fromPortId)?.name ?? "출발항"} → ${getPort(step.toPortId)?.name ?? "도착항"} ${step.count}회`;
   }
 }
 
@@ -452,6 +485,14 @@ export function conditionMet(state: PlayerState, condition: StoryCondition): boo
       return state.discoveredAreaIds.includes(condition.areaId) || state.unlockedAreaIds.includes(condition.areaId);
     case "voyageEventCleared":
       return voyageEventCleared(state, condition.eventId);
+    case "portVisited":
+      return state.visitedPortIds.includes(condition.portId);
+    case "portReputationAtLeast":
+      return (state.portReputation[condition.portId] ?? 0) >= condition.reputation;
+    case "tradeProfitAtLeast":
+      return state.tradeLedger.totalProfit >= condition.profit;
+    case "completeTradeRoute":
+      return (state.tradeRouteHistory[routeKey(condition.fromPortId, condition.toPortId)]?.completed ?? 0) >= condition.count;
   }
 }
 
@@ -500,6 +541,7 @@ export function claimQuest(state: PlayerState, questId: string): PlayerState {
   };
 
   next = grantStoryRewards(next, quest.rewards);
+  next = grantPortReputationRewards(next, quest.rewards);
   next = applyStoryEffect(next, quest.effects);
   next = markChapterProgress(next, quest.chapterId, quest.id.includes("final") || quest.id.includes("crown-castle") ? 400 : 140);
 
@@ -563,6 +605,7 @@ export function applyStoryChoice(
   };
 
   next = grantStoryRewards(next, option.rewards);
+  next = grantPortReputationRewards(next, option.rewards);
   next = addXp(next, option.rewards?.xp ?? 0);
   return refreshQuestCompletion(next);
 }
@@ -604,6 +647,13 @@ function grantStoryRewards(state: PlayerState, rewards?: StoryRewards): PlayerSt
     equippedBoatCosmeticId:
       rewardItem.kind === "boatCosmetic" ? rewardItem.id : state.equippedBoatCosmeticId,
   };
+}
+
+function grantPortReputationRewards(state: PlayerState, rewards?: StoryRewards): PlayerState {
+  return (rewards?.portReputation ?? []).reduce(
+    (next, reward) => addPortReputation(next, reward.portId, reward.amount),
+    state,
+  );
 }
 
 function applyStoryEffect(state: PlayerState, effect?: StoryEffect): PlayerState {

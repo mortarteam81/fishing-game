@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { areas, fish, items, quests, storyChoices } from "../src/game/content";
+import { ports, tradeGoods, tradeQuests } from "../src/game/commerceContent";
 import { gearRoleMeta } from "../src/game/gearRoles";
 import { voyageEvents } from "../src/game/voyageEvents";
 import { weatherDefinitions } from "../src/game/weather";
@@ -9,6 +10,8 @@ describe("content data", () => {
     const fishIds = new Set(fish.map((entry) => entry.id));
     const areaIds = new Set(areas.map((entry) => entry.id));
     const eventIds = new Set(voyageEvents.map((event) => event.id));
+    const portIds = new Set(ports.map((port) => port.id));
+    const tradeGoodIds = new Set(tradeGoods.map((good) => good.id));
 
     expect(fish).toHaveLength(179);
     expect(areas).toHaveLength(31);
@@ -57,6 +60,8 @@ describe("content data", () => {
     const itemIds = new Set(items.map((entry) => entry.id));
     const questIds = new Set(quests.map((entry) => entry.id));
     const eventIds = new Set(voyageEvents.map((event) => event.id));
+    const portIds = new Set(ports.map((port) => port.id));
+    const tradeGoodIds = new Set(tradeGoods.map((good) => good.id));
 
     expect(itemIds.size).toBe(items.length);
     expect(items.filter((item) => item.kind === "rod")).toHaveLength(75);
@@ -77,8 +82,33 @@ describe("content data", () => {
         expect(item.setId).toBeTruthy();
       }
     }
-    expect(quests).toHaveLength(15);
+    expect(ports).toHaveLength(10);
+    expect(tradeGoods).toHaveLength(60);
+    expect(tradeQuests).toHaveLength(24);
+    expect(portIds.size).toBe(ports.length);
+    expect(tradeGoodIds.size).toBe(tradeGoods.length);
+    expect(quests).toHaveLength(39);
     expect(questIds.size).toBe(quests.length);
+
+    for (const port of ports) {
+      expect(port.specialtyGoodIds.length).toBeGreaterThan(0);
+      expect(port.connectedAreaIds.length).toBeGreaterThan(0);
+      for (const goodId of [...port.specialtyGoodIds, ...port.demandGoodIds]) {
+        expect(tradeGoodIds.has(goodId)).toBe(true);
+      }
+      for (const areaId of port.connectedAreaIds) {
+        expect(areaIds.has(areaId)).toBe(true);
+      }
+    }
+
+    for (const good of tradeGoods) {
+      expect(portIds.has(good.originPortId)).toBe(true);
+      expect(good.basePrice).toBeGreaterThan(0);
+      expect(good.volume).toBeGreaterThan(0);
+      for (const portId of good.demandPortIds) {
+        expect(portIds.has(portId)).toBe(true);
+      }
+    }
 
     for (const quest of quests) {
       if (quest.rewards.itemId) {
@@ -103,6 +133,13 @@ describe("content data", () => {
         }
         if (requirement.kind === "equippedGearRole") {
           expect(gearRoleMeta[requirement.role]).toBeTruthy();
+        }
+        if (requirement.kind === "portVisited" || requirement.kind === "portReputationAtLeast") {
+          expect(portIds.has(requirement.portId)).toBe(true);
+        }
+        if (requirement.kind === "completeTradeRoute") {
+          expect(portIds.has(requirement.fromPortId)).toBe(true);
+          expect(portIds.has(requirement.toPortId)).toBe(true);
         }
       }
 
@@ -132,6 +169,17 @@ describe("content data", () => {
         }
         if (step.kind === "discoverArea") {
           expect(areaIds.has(step.areaId)).toBe(true);
+        }
+        if (step.kind === "portVisited" || step.kind === "portReputationAtLeast") {
+          expect(portIds.has(step.portId)).toBe(true);
+        }
+        if (step.kind === "deliverTradeGood" || step.kind === "sellTradeGood") {
+          expect(tradeGoodIds.has(step.goodId)).toBe(true);
+          expect(portIds.has(step.portId)).toBe(true);
+        }
+        if (step.kind === "completeTradeRoute") {
+          expect(portIds.has(step.fromPortId)).toBe(true);
+          expect(portIds.has(step.toPortId)).toBe(true);
         }
       }
     }
