@@ -1,13 +1,14 @@
 import Phaser from "phaser";
 import { addPlayerBoat, boatWakeTint } from "../game/boat";
 import { ports } from "../game/commerceContent";
-import { isPortUnlocked } from "../game/commerce";
+import { getPort, isPortUnlocked, sailToPort } from "../game/commerce";
 import { addCompanionFollowers } from "../game/companionVisuals";
 import { areas, fish } from "../game/content";
 import { fixedContentOffset, fixedScreenCenterX, sceneGameWidth } from "../game/layout";
-import { companionTextures, ensureSvgTextures, fishTexturesForIds, playerPresentationTextures } from "../game/lazyTextures";
+import { companionTextures, ensureSvgTextures, fishTexturesForIds, playerPresentationTextures, portMarkerTextures } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { playSoftTone } from "../game/audio";
+import { getPortVisual } from "../game/portVisuals";
 import {
   canAttemptVoyageEventForArea,
   canDiscoverArea,
@@ -22,7 +23,8 @@ import { loadGame, saveGame } from "../game/storage";
 import { addMuteButton, addTextButton } from "../game/ui";
 import { getVoyageEvent, voyageEventForArea } from "../game/voyageEvents";
 import { getAreaWeather } from "../game/weather";
-import type { AreaDefinition, PlayerState, VoyageEventId } from "../game/types";
+import { portMarkerTextureKey } from "../game/textureKeys";
+import type { AreaDefinition, PlayerState, PortDefinition, VoyageEventId } from "../game/types";
 
 type Hotspot = {
   area: AreaDefinition;
@@ -155,11 +157,13 @@ export class OceanScene extends Phaser.Scene {
   private wakeTimer = 0;
   private prompt?: Phaser.GameObjects.Container;
   private targetMarker?: Phaser.GameObjects.Container;
+  private targetPortId?: string;
   private miniBoat?: Phaser.GameObjects.Triangle;
   private statusText?: Phaser.GameObjects.Text;
   private weatherText?: Phaser.GameObjects.Text;
   private compassNeedle?: Phaser.GameObjects.Triangle;
   private nearby?: Hotspot;
+  private nearbyPort?: PortDefinition;
   private shimmerLayers: Phaser.GameObjects.Graphics[] = [];
   private wakeCooldown = 0;
   private voyageEventGroup?: Phaser.GameObjects.Container;
@@ -198,10 +202,12 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private async renderWhenReady(loadingObjects: Phaser.GameObjects.GameObject[]) {
+    const unlockedPorts = ports.filter((entry) => isPortUnlocked(this.state, entry));
     await ensureSvgTextures(this, [
       ...playerPresentationTextures(this.state),
       ...companionTextures(this.state),
       ...fishTexturesForIds(this.oceanFishIds()),
+      ...portMarkerTextures(unlockedPorts),
     ]);
     loadingObjects.forEach((object) => object.destroy());
     this.drawSea();
@@ -361,11 +367,13 @@ export class OceanScene extends Phaser.Scene {
   private addPortObjects() {
     for (const port of ports.filter((entry) => isPortUnlocked(this.state, entry))) {
       const marker = this.add.container(port.position.x, port.position.y).setDepth(9);
-      marker.add(this.add.circle(0, 0, 26, PALETTE.butter, 0.92).setStrokeStyle(4, PALETTE.ink, 0.72));
-      marker.add(this.add.rectangle(0, 4, 34, 18, PALETTE.paper, 0.95).setStrokeStyle(2, PALETTE.ink, 0.45));
-      marker.add(this.add.triangle(0, -24, 0, -20, -16, 8, 16, 8, PALETTE.coral, 0.95).setStrokeStyle(2, PALETTE.ink, 0.4));
+      const visual = getPortVisual(port);
+      const icon = this.add.image(0, 0, portMarkerTextureKey(port.id)).setScale(0.72);
+      const halo = this.add.circle(0, 0, port.id === this.state.currentPortId ? 44 : 36, PALETTE.butter, port.id === this.state.currentPortId ? 0.18 : 0.1)
+        .setStrokeStyle(3, port.id === this.state.currentPortId ? PALETTE.coral : PALETTE.white, port.id === this.state.currentPortId ? 0.62 : 0.3);
+      marker.add([halo, icon]);
       this.add
-        .text(port.position.x, port.position.y + 48, port.name, {
+        .text(port.position.x, port.position.y + 52, port.name, {
           fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
           fontSize: "18px",
           fontStyle: "900",
@@ -375,9 +383,32 @@ export class OceanScene extends Phaser.Scene {
         })
         .setOrigin(0.5)
         .setDepth(10);
-      marker.setSize(74, 74);
+      this.add
+        .text(port.position.x, port.position.y + 78, visual.landmark, {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "12px",
+          fontStyle: "900",
+          color: TEXT.secondary,
+          backgroundColor: "rgba(255,251,239,0.58)",
+          padding: { x: 7, y: 3 },
+        })
+        .setOrigin(0.5)
+        .setDepth(10);
+      marker.setSize(84, 84);
       marker.setInteractive({ useHandCursor: true });
-      marker.on("pointerdown", () => this.scene.start("Port", { portId: port.id }));
+      marker.on("pointerdown", (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+        event?.stopPropagation();
+        this.selectPortTarget(port);
+      });
+      this.tweens.add({
+        targets: halo,
+        scale: port.id === this.state.currentPortId ? 1.08 : 1.16,
+        alpha: port.id === this.state.currentPortId ? 0.36 : 0.22,
+        duration: 1200,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.inOut",
+      });
     }
   }
 
@@ -410,7 +441,8 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private addBoat() {
-    this.boat = addPlayerBoat(this, 230, 850, this.state, { scale: 0.82, depth: 12, mapMode: true, showCaptain: false });
+    const currentPort = getPort(this.state.currentPortId);
+    this.boat = addPlayerBoat(this, currentPort?.position.x ?? 230, currentPort?.position.y ?? 850, this.state, { scale: 0.82, depth: 12, mapMode: true, showCaptain: false });
     addCompanionFollowers(this, this.boat, this.state, "ocean");
     this.cameras.main.startFollow(this.boat, true, 0.08, 0.08);
     this.tweens.add({
@@ -584,7 +616,7 @@ export class OceanScene extends Phaser.Scene {
     this.cursors = this.input.keyboard?.createCursorKeys();
     this.keys = this.input.keyboard?.addKeys("W,A,S,D") as Record<string, Phaser.Input.Keyboard.Key>;
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      if (pointer.y < 78 || pointer.y > 470) {
+      if (pointer.y < 210 || pointer.y > 470) {
         return;
       }
       const world = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
@@ -605,6 +637,7 @@ export class OceanScene extends Phaser.Scene {
 
     if (direction.lengthSq() > 0) {
       this.target = undefined;
+      this.targetPortId = undefined;
       direction.normalize().scale(speed);
       this.setBoatPosition(this.boat.x + direction.x, this.boat.y + direction.y);
       this.rotateBoat(direction);
@@ -659,11 +692,13 @@ export class OceanScene extends Phaser.Scene {
     });
   }
 
-  private setSailTarget(x: number, y: number) {
+  private setSailTarget(x: number, y: number, portId?: string) {
     this.target = new Phaser.Math.Vector2(x, y);
+    this.targetPortId = portId;
     this.targetMarker?.destroy();
-    const ring = this.add.circle(0, 0, 30, PALETTE.butter, 0.15).setStrokeStyle(4, PALETTE.butter, 0.88);
-    const sparkle = this.add.image(0, -30, "sparkle-point").setScale(0.55);
+    const ringColor = portId ? PALETTE.coral : PALETTE.butter;
+    const ring = this.add.circle(0, 0, portId ? 38 : 30, ringColor, 0.15).setStrokeStyle(4, ringColor, 0.88);
+    const sparkle = this.add.image(0, portId ? -38 : -30, "sparkle-point").setScale(portId ? 0.68 : 0.55);
     this.targetMarker = this.add.container(x, y, [ring, sparkle]).setDepth(11);
     this.tweens.add({
       targets: this.targetMarker,
@@ -687,6 +722,14 @@ export class OceanScene extends Phaser.Scene {
     }
   }
 
+  private selectPortTarget(port: PortDefinition) {
+    this.setSailTarget(port.position.x, port.position.y, port.id);
+    const visual = getPortVisual(port);
+    this.statusText?.setText(`항해 목표: ${port.name}`);
+    this.weatherText?.setText(`${visual.landmark} · 도크 근처에서 입항할 수 있어요`);
+    playSoftTone(this, this.state, 580, 0.06);
+  }
+
   private updateHudDirection(direction: Phaser.Math.Vector2) {
     this.compassNeedle?.setRotation(Phaser.Math.Angle.Between(0, 0, direction.x, direction.y) + Math.PI / 2);
     if (this.miniBoat) {
@@ -699,6 +742,27 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private updateNearbyPrompt() {
+    const closestPort = ports
+      .filter((port) => isPortUnlocked(this.state, port))
+      .find((port) => Phaser.Math.Distance.Between(this.boat.x, this.boat.y, port.position.x, port.position.y) < 150);
+    if (closestPort) {
+      if (closestPort.id === this.nearbyPort?.id) {
+        return;
+      }
+      this.prompt?.destroy();
+      this.prompt = undefined;
+      this.nearby = undefined;
+      this.nearbyPort = closestPort;
+      this.showPortDockPrompt(closestPort);
+      return;
+    }
+
+    if (this.nearbyPort) {
+      this.prompt?.destroy();
+      this.prompt = undefined;
+      this.nearbyPort = undefined;
+    }
+
     const available = this.mapHotspots().filter((hotspot) => this.state.unlockedAreaIds.includes(hotspot.area.id) || canDiscoverArea(this.state, hotspot.area) || canAttemptVoyageEventForArea(this.state, hotspot.area));
     const closest = available.find((hotspot) => Phaser.Math.Distance.Between(this.boat.x, this.boat.y, hotspot.x, hotspot.y) < 170);
     if (closest?.area.id === this.nearby?.area.id) {
@@ -772,6 +836,54 @@ export class OceanScene extends Phaser.Scene {
       }
       this.scene.start("Fishing", { areaId: closest.area.id });
     });
+  }
+
+  private showPortDockPrompt(port: PortDefinition) {
+    const visual = getPortVisual(port);
+    const isCurrent = port.id === this.state.currentPortId;
+    this.statusText?.setText(isCurrent ? `${port.name} 도크` : `${port.name} 도착 가능`);
+    this.weatherText?.setText(visual.arrivalLine);
+    playSoftTone(this, this.state, isCurrent ? 520 : 680, 0.07);
+
+    const panel = this.add.rectangle(0, 0, 460, 96, PALETTE.paper, 0.92).setStrokeStyle(4, PALETTE.ink, 0.86);
+    const title = this.add
+      .text(-210, -22, isCurrent ? `${port.name}에 돌아왔어요` : `${port.name} 입항 준비`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "22px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        fixedWidth: 284,
+      })
+      .setOrigin(0, 0.5);
+    const hint = this.add
+      .text(-210, 22, visual.arrivalLine, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "15px",
+        fontStyle: "800",
+        color: TEXT.secondary,
+        wordWrap: { width: 286 },
+      })
+      .setOrigin(0, 0.5);
+    const button = addTextButton(this, 148, 0, isCurrent ? "항구 입장" : "입항하기", () => this.dockAtPort(port), {
+      width: 122,
+      height: 48,
+      fontSize: 18,
+      fill: isCurrent ? PALETTE.seaFoam : PALETTE.butter,
+      iconKey: "icon-harbor",
+      iconScale: 0.31,
+    });
+    this.prompt = this.add.container(fixedContentOffset(this) + 480, 112, [panel, title, hint, button]).setScrollFactor(0).setDepth(72);
+    this.prompt.setSize(460, 96);
+    this.prompt.setInteractive({ useHandCursor: true });
+    this.prompt.on("pointerdown", () => this.dockAtPort(port));
+  }
+
+  private dockAtPort(port: PortDefinition) {
+    const outcome = sailToPort(this.state, port.id);
+    saveGame(outcome.state);
+    this.target = undefined;
+    this.targetPortId = undefined;
+    this.scene.start("Port", { portId: outcome.state.currentPortId, notice: outcome.message });
   }
 
   private mapHotspots(): Hotspot[] {

@@ -1,6 +1,6 @@
 import { CREATURE_SVGS } from "./creatureSvgs";
-import { boatFlagTextureKey, boatMapTextureKey, boatSideTextureKey, captainTextureKey, itemIconTextureKey } from "./textureKeys";
-import type { CaptainStyle, FishDefinition, ItemDefinition } from "./types";
+import { getPortVisual, type PortMarkerShape } from "./portVisuals";
+import type { CaptainStyle, FishDefinition, ItemDefinition, PortDefinition } from "./types";
 
 type SvgPalette = {
   body: string;
@@ -118,6 +118,161 @@ export function captainSvgFor(captain: CaptainStyle): string {
       <path d="M-18 -38 C-3 -32 12 -32 27 -38" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.28"/>
     </g>
   </svg>`;
+}
+
+export function portMarkerSvgFor(port: PortDefinition): string {
+  const visual = getPortVisual(port);
+  const colors = paletteForPort(port);
+  return svg(112, 112, `
+    <defs>
+      ${gearGradient("port-marker", colors)}
+      <filter id="port-marker-shadow" x="-25%" y="-25%" width="150%" height="150%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="${colors.ink}" flood-opacity="0.22"/>
+      </filter>
+    </defs>
+    <ellipse cx="56" cy="96" rx="34" ry="7" fill="${colors.ink}" opacity="0.16"/>
+    <path d="M56 9 C79 9 97 27 97 50 C97 75 74 90 56 103 C38 90 15 75 15 50 C15 27 33 9 56 9Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="3.2" filter="url(#port-marker-shadow)"/>
+    <circle cx="56" cy="49" r="34" fill="url(#port-marker-grad)" opacity="0.96"/>
+    <circle cx="56" cy="49" r="29" fill="${colors.accentSoft}" opacity="0.22"/>
+    ${portLandmarkSvg(visual.markerShape, colors, 56, 58, 0.78)}
+    <path d="M33 30 C45 23 65 22 80 31" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.36"/>
+  `);
+}
+
+export function portInteriorSvgFor(port: PortDefinition): string {
+  const visual = getPortVisual(port);
+  const colors = paletteForPort(port);
+  const dark = port.theme === "storm" || port.theme === "trench" || port.theme === "moon" || port.theme === "aurora";
+  const sky = dark ? colors.bodyDeep : colors.accentSoft;
+  const horizon = dark ? colors.body : colors.bodyDeep;
+  const light = dark ? colors.glow : colors.accent;
+  return svg(960, 270, `
+    <defs>
+      <linearGradient id="port-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="${sky}"/>
+        <stop offset="62%" stop-color="${colors.body}"/>
+        <stop offset="100%" stop-color="${horizon}"/>
+      </linearGradient>
+      <linearGradient id="port-water" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="${colors.bodyDeep}"/>
+        <stop offset="48%" stop-color="${colors.body}"/>
+        <stop offset="100%" stop-color="${colors.accentSoft}"/>
+      </linearGradient>
+      <filter id="port-soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="${colors.ink}" flood-opacity="0.18"/>
+      </filter>
+    </defs>
+    <rect width="960" height="270" fill="url(#port-sky)"/>
+    <circle cx="${dark ? 790 : 764}" cy="${dark ? 62 : 54}" r="${dark ? 36 : 42}" fill="${light}" opacity="${dark ? 0.52 : 0.92}"/>
+    <path d="M0 136 C130 104 208 118 306 94 C404 70 516 122 622 94 C728 66 822 92 960 58 L960 172 L0 172Z" fill="${colors.bodyDeep}" opacity="${dark ? 0.38 : 0.24}"/>
+    <path d="M0 158 C120 132 240 144 360 126 C500 105 608 146 748 124 C836 110 900 112 960 98 L960 184 L0 184Z" fill="${colors.ink}" opacity="${dark ? 0.24 : 0.13}"/>
+    <rect x="0" y="166" width="960" height="104" fill="url(#port-water)" opacity="0.94"/>
+    ${portWaveLines(colors)}
+    <g filter="url(#port-soft-shadow)">
+      <path d="M88 190 H830 L874 232 H42Z" fill="${colors.paper}" opacity="0.82" stroke="${colors.ink}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M136 200 H790" stroke="${colors.bodyDeep}" stroke-width="8" stroke-linecap="round" opacity="0.48"/>
+      <path d="M180 184 V235 M300 184 V235 M420 184 V235 M540 184 V235 M660 184 V235 M780 184 V235" stroke="${colors.ink}" stroke-width="4" opacity="0.28"/>
+      ${portLandmarkSvg(visual.markerShape, colors, 488, 150, 2.35)}
+      <path d="M92 184 C210 174 328 178 446 174 C594 169 710 178 848 168" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.28"/>
+    </g>
+    <path d="M36 240 C182 226 286 252 444 236 C596 221 734 250 920 232" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.22"/>
+  `);
+}
+
+function paletteForPort(port: PortDefinition): SvgPalette {
+  const role = getPortVisual(port).paletteRole;
+  const mapped =
+    role === "warm" ? "beach" :
+    role === "craft" ? "coral" :
+    role === "market" ? "kelp" :
+    role === "starwhale" ? "aurora" :
+    role === "deep" ? "trench" :
+    role;
+  return themePalettes[mapped] ?? themePalettes[port.theme] ?? themePalettes.beach;
+}
+
+function portWaveLines(colors: SvgPalette): string {
+  return [184, 204, 226, 248].map((y, index) => {
+    const alpha = 0.22 - index * 0.03;
+    return `<path d="M${20 + index * 18} ${y} C116 ${y - 16} 188 ${y + 16} 284 ${y} S460 ${y - 13} 560 ${y} S742 ${y + 13} 930 ${y - 4}" fill="none" stroke="${index % 2 === 0 ? colors.paper : "#ffffff"}" stroke-width="${3 - index * 0.25}" stroke-linecap="round" opacity="${alpha}"/>`;
+  }).join("");
+}
+
+function portLandmarkSvg(shape: PortMarkerShape, colors: SvgPalette, x: number, y: number, scale: number): string {
+  const t = `translate(${x} ${y}) scale(${scale})`;
+  switch (shape) {
+    case "coralCrane":
+      return `<g transform="${t}">
+        <path d="M-29 12 H24 L32 35 H-38Z" fill="${colors.bodyDeep}" stroke="${colors.ink}" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M-18 10 V-30 H-4 V10Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="2"/>
+        <path d="M-12 -30 H35 L48 -18" fill="none" stroke="${colors.ink}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 -28 V12" stroke="${colors.ink}" stroke-width="2" opacity="0.55"/>
+        <circle cx="32" cy="18" r="7" fill="${colors.accent}" stroke="${colors.ink}" stroke-width="1.6"/>
+        <path d="M-36 12 C-20 0 2 -1 18 12" fill="${colors.accentSoft}" stroke="${colors.ink}" stroke-width="1.6"/>
+      </g>`;
+    case "mistBeacon":
+      return `<g transform="${t}">
+        <path d="M-24 34 L-15 -22 H15 L24 34Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="2.3" stroke-linejoin="round"/>
+        <path d="M-11 -26 H11 L18 -12 H-18Z" fill="${colors.bodyDeep}" stroke="${colors.ink}" stroke-width="2"/>
+        <circle cx="0" cy="-14" r="7" fill="${colors.glow}" opacity="0.86" stroke="${colors.ink}" stroke-width="1.1"/>
+        <path d="M-40 -4 C-22 -10 -12 -9 4 -4 M-34 9 C-12 2 15 5 35 12" fill="none" stroke="${colors.paper}" stroke-width="4" stroke-linecap="round" opacity="0.56"/>
+      </g>`;
+    case "kelpCanopy":
+      return `<g transform="${t}">
+        <path d="M-36 8 C-20 -18 18 -18 36 8Z" fill="${colors.accentSoft}" stroke="${colors.ink}" stroke-width="2.2"/>
+        <path d="M-31 8 H31 L24 34 H-24Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="2.1" stroke-linejoin="round"/>
+        <path d="M-22 9 V34 M0 8 V34 M22 9 V34" stroke="${colors.ink}" stroke-width="2" opacity="0.35"/>
+        <path d="M-39 2 C-22 12 -11 0 0 10 C12 0 23 12 40 2" fill="none" stroke="${colors.bodyDeep}" stroke-width="4" stroke-linecap="round"/>
+      </g>`;
+    case "basaltShipyard":
+      return `<g transform="${t}">
+        <path d="M-42 34 L-30 -18 L-14 8 L0 -28 L17 7 L31 -12 L42 34Z" fill="${colors.bodyDeep}" stroke="${colors.ink}" stroke-width="2.4" stroke-linejoin="round"/>
+        <path d="M-28 19 H28 L21 32 H-20Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="1.8"/>
+        <path d="M-18 14 H18 M-4 4 V25" stroke="${colors.accent}" stroke-width="4" stroke-linecap="round"/>
+        <path d="M18 -18 C31 -7 32 6 24 16" fill="none" stroke="${colors.glow}" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+      </g>`;
+    case "pearlArch":
+      return `<g transform="${t}">
+        <path d="M-36 35 V6 C-36 -17 -18 -32 0 -32 C18 -32 36 -17 36 6 V35 H20 V7 C20 -6 10 -16 0 -16 C-10 -16 -20 -6 -20 7 V35Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="2.4" stroke-linejoin="round"/>
+        <circle cx="0" cy="-29" r="8" fill="${colors.glow}" stroke="${colors.ink}" stroke-width="1.4"/>
+        <circle cx="-27" cy="-2" r="5" fill="${colors.accentSoft}" opacity="0.9"/>
+        <circle cx="27" cy="-2" r="5" fill="${colors.accentSoft}" opacity="0.9"/>
+      </g>`;
+    case "stormCompass":
+      return `<g transform="${t}">
+        <path d="M-28 34 H28 L20 -18 H-20Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="2.2" stroke-linejoin="round"/>
+        <circle cx="0" cy="-16" r="19" fill="${colors.bodyDeep}" stroke="${colors.ink}" stroke-width="2.2"/>
+        <path d="M0 -31 L7 -16 L0 -1 L-7 -16Z" fill="${colors.accent}" stroke="${colors.ink}" stroke-width="1.4"/>
+        <path d="M-36 -1 C-24 -12 -12 -9 -5 -20 M18 -30 C33 -26 38 -14 34 -4" fill="none" stroke="${colors.glow}" stroke-width="3.2" stroke-linecap="round" opacity="0.76"/>
+      </g>`;
+    case "auroraTower":
+      return `<g transform="${t}">
+        <path d="M-22 34 L-12 -30 H12 L22 34Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M-18 -6 H18 M-15 14 H15" stroke="${colors.bodyDeep}" stroke-width="3" opacity="0.5"/>
+        <path d="M-42 -16 C-25 -36 -6 -2 12 -22 C24 -36 35 -18 43 -27" fill="none" stroke="${colors.glow}" stroke-width="5" stroke-linecap="round" opacity="0.72"/>
+      </g>`;
+    case "starwhaleDome":
+      return `<g transform="${t}">
+        <path d="M-38 31 H38 V14 C38 -11 21 -28 0 -28 C-21 -28 -38 -11 -38 14Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="2.3" stroke-linejoin="round"/>
+        <path d="M-25 14 C-17 0 -9 -8 0 -8 C9 -8 17 0 25 14" fill="none" stroke="${colors.bodyDeep}" stroke-width="2.5" opacity="0.55"/>
+        <path d="M-16 -32 Q0 -45 16 -32" fill="none" stroke="${colors.glow}" stroke-width="4" stroke-linecap="round"/>
+        <path d="M17 -4 C27 -18 37 -18 45 -8 M17 0 C28 -6 37 -3 46 5" fill="none" stroke="${colors.accent}" stroke-width="3" stroke-linecap="round"/>
+      </g>`;
+    case "deepCrownGate":
+      return `<g transform="${t}">
+        <path d="M-38 35 V-10 L-22 -25 L-7 -10 L7 -27 L22 -10 L38 -25 V35 H18 V2 H-18 V35Z" fill="${colors.bodyDeep}" stroke="${colors.ink}" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M-15 35 V5 C-15 -5 15 -5 15 5 V35Z" fill="${colors.paper}" opacity="0.82" stroke="${colors.ink}" stroke-width="1.8"/>
+        <circle cx="0" cy="-6" r="6" fill="${colors.glow}" opacity="0.9"/>
+        <path d="M-36 -7 L-22 -20 L-7 -7 L7 -24 L22 -7 L36 -20" fill="none" stroke="${colors.glow}" stroke-width="3" stroke-linejoin="round" opacity="0.74"/>
+      </g>`;
+    default:
+      return `<g transform="${t}">
+        <path d="M-24 34 L-18 -26 H18 L24 34Z" fill="${colors.paper}" stroke="${colors.ink}" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M-14 -31 H14 L20 -18 H-20Z" fill="${colors.bodyDeep}" stroke="${colors.ink}" stroke-width="2"/>
+        <circle cx="0" cy="-14" r="8" fill="${colors.glow}" opacity="0.9"/>
+        <path d="M-30 34 H30" stroke="${colors.ink}" stroke-width="3" stroke-linecap="round"/>
+      </g>`;
+  }
 }
 
 function createGeneratedCreatureSvg(fish: FishDefinition): string {

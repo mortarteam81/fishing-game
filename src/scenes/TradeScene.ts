@@ -9,6 +9,7 @@ import {
   getTradeGood,
   getUsedCargoVolume,
   sellTradeGood,
+  type MarketQuote,
 } from "../game/commerce";
 import { PALETTE, TEXT } from "../game/palette";
 import { refreshQuestCompletion } from "../game/progression";
@@ -152,11 +153,14 @@ export class TradeScene extends Phaser.Scene {
       color: TEXT.secondary,
       fixedWidth: 280,
     }).setOrigin(0, 0.5);
+    this.add.rectangle(536, y, 150, 30, this.trendFill(quote.trend), 0.94)
+      .setStrokeStyle(2, PALETTE.ink, 0.34)
+      .setOrigin(0.5);
     this.add.text(466, y, `${quote.label} · ${this.mode === "buy" ? quote.buyPrice : quote.sellPrice}`, {
       fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
       fontSize: "16px",
       fontStyle: "900",
-      color: quote.trend === "hot" || quote.trend === "rare" ? TEXT.primary : TEXT.secondary,
+      color: TEXT.primary,
       fixedWidth: 156,
     }).setOrigin(0, 0.5);
     addTextButton(this, 740, y, this.mode === "buy" ? "1개 사기" : "1개 팔기", () => {
@@ -213,5 +217,13 @@ export class TradeScene extends Phaser.Scene {
       relic: "유물",
     };
     return labels[category];
+  }
+
+  private trendFill(trend: MarketQuote["trend"]): number {
+    if (trend === "hot") return PALETTE.butter;
+    if (trend === "rare") return 0xc7f6ef;
+    if (trend === "cheap") return PALETTE.seaFoam;
+    if (trend === "expensive") return 0xffd6c9;
+    return PALETTE.paper;
   }
 }

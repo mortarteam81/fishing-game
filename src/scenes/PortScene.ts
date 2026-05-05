@@ -1,10 +1,13 @@
 import Phaser from "phaser";
 import { ports } from "../game/commerceContent";
-import { availablePorts, getCargoCapacity, getPort, getUsedCargoVolume, isPortUnlocked, sailToPort } from "../game/commerce";
+import { getCargoCapacity, getPort, getTradeGood, getUsedCargoVolume, isPortUnlocked } from "../game/commerce";
 import { chapterShortLabel } from "../game/chapters";
+import { ensureSvgTextures, portInteriorTexture } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
+import { getPortVisual } from "../game/portVisuals";
 import { claimQuest, getVisibleQuests, refreshQuestCompletion, stepLabel, stepProgress, stepTarget } from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
+import { portInteriorTextureKey } from "../game/textureKeys";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
 import type { PlayerState, PortDefinition, QuestDefinition } from "../game/types";
 
@@ -29,7 +32,23 @@ export class PortScene extends Phaser.Scene {
       this.port = getPort(this.state.currentPortId) ?? ports[0];
     }
 
+    const loadingBg = this.add.rectangle(480, 270, 960, 540, 0xb3edf2, 1);
+    const loading = this.add.text(480, 270, "항구 전경을 준비하는 중...", {
+      fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "22px",
+      fontStyle: "900",
+      color: TEXT.primary,
+      backgroundColor: "rgba(255,251,239,0.72)",
+      padding: { x: 16, y: 8 },
+    }).setOrigin(0.5);
+    void this.renderWhenReady([loadingBg, loading]);
+  }
+
+  private async renderWhenReady(loadingObjects: Phaser.GameObjects.GameObject[]) {
+    await ensureSvgTextures(this, portInteriorTexture(this.port));
+    loadingObjects.forEach((object) => object.destroy());
     addOceanBackground(this, this.port.theme);
+    this.addInteriorBackdrop();
     addHeader(this, "항구 네트워크", this.state);
     addMuteButton(this);
 
@@ -38,6 +57,21 @@ export class PortScene extends Phaser.Scene {
     this.addQuestPanel();
     this.addRoutePanel();
     this.addNavigation();
+  }
+
+  private addInteriorBackdrop() {
+    const visual = getPortVisual(this.port);
+    this.add.image(480, 160, portInteriorTextureKey(this.port.id)).setDepth(-8).setDisplaySize(900, 254).setAlpha(0.96);
+    this.add.rectangle(480, 268, 900, 34, PALETTE.ink, 0.12).setDepth(-7);
+    this.add.text(86, 250, `${visual.landmark} · ${visual.arrivalLine}`, {
+      fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "14px",
+      fontStyle: "900",
+      color: TEXT.primary,
+      backgroundColor: "rgba(255,248,234,0.72)",
+      padding: { x: 10, y: 4 },
+      fixedWidth: 790,
+    }).setOrigin(0, 0.5).setDepth(-6);
   }
 
   private addPortSummary() {
@@ -181,28 +215,70 @@ export class PortScene extends Phaser.Scene {
 
   private addRoutePanel() {
     addPanel(this, 706, 360, 390, 184, PALETTE.paper);
-    this.add.text(546, 292, "항구 이동", {
+    this.add.text(546, 292, "추천 항로", {
       fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
       fontSize: "24px",
       fontStyle: "900",
       color: TEXT.primary,
     }).setOrigin(0, 0.5);
 
-    availablePorts(this.state).slice(0, 6).forEach((port, index) => {
-      const x = 620 + (index % 2) * 156;
-      const y = 332 + Math.floor(index / 2) * 48;
-      addTextButton(this, x, y, port.id === this.state.currentPortId ? "현재 항구" : port.name, () => {
-        const outcome = sailToPort(this.state, port.id);
-        saveGame(outcome.state);
-        this.scene.restart({ portId: outcome.state.currentPortId, notice: outcome.message });
-      }, {
-        width: 140,
-        height: 38,
-        fontSize: 13,
-        fill: port.id === this.state.currentPortId ? PALETTE.disabled : PALETTE.seaFoam,
-        disabled: port.id === this.state.currentPortId,
-      });
+    this.add.text(546, 324, "다른 항구는 바다 지도에서 직접 운항해 도크에 닿아야 입항할 수 있어요.", {
+      fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "14px",
+      fontStyle: "800",
+      color: TEXT.secondary,
+      wordWrap: { width: 300 },
+    }).setOrigin(0, 0.5);
+
+    const suggestions = this.routeSuggestions().slice(0, 3);
+    if (suggestions.length === 0) {
+      this.add.text(546, 378, "교역을 이어가면 추천 항로가 더 또렷해져요.", {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "15px",
+        fontStyle: "800",
+        color: TEXT.secondary,
+        wordWrap: { width: 300 },
+      }).setOrigin(0, 0.5);
+    }
+
+    suggestions.forEach((suggestion, index) => {
+      this.add.text(552, 372 + index * 31, `${index + 1}. ${suggestion}`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "14px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        fixedWidth: 306,
+      }).setOrigin(0, 0.5);
     });
+
+    addTextButton(this, 772, 462, "지도에서 출항", () => this.scene.start("Ocean"), {
+      width: 154,
+      height: 40,
+      fontSize: 15,
+      fill: PALETTE.butter,
+      iconKey: "icon-map",
+      iconScale: 0.28,
+    });
+  }
+
+  private routeSuggestions(): string[] {
+    const seen = new Set<string>();
+    const suggestions: string[] = [];
+    for (const goodId of this.port.specialtyGoodIds) {
+      const good = getTradeGood(goodId);
+      if (!good) {
+        continue;
+      }
+      for (const portId of good.demandPortIds) {
+        const destination = getPort(portId);
+        if (!destination || destination.id === this.port.id || !isPortUnlocked(this.state, destination) || seen.has(destination.id)) {
+          continue;
+        }
+        seen.add(destination.id);
+        suggestions.push(`${good.name} → ${destination.name}`);
+      }
+    }
+    return suggestions;
   }
 
   private addNavigation() {

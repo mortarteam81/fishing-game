@@ -19,3 +19,11 @@ export function boatFlagTextureKey(itemId: string): string {
 export function captainTextureKey(captain: CaptainStyle): string {
   return `captain-${captain.presetId}`;
 }
+
+export function portMarkerTextureKey(portId: string): string {
+  return `port-marker-${portId}`;
+}
+
+export function portInteriorTextureKey(portId: string): string {
+  return `port-interior-${portId}`;
+}

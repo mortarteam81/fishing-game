@@ -7,8 +7,10 @@ import {
   boatSideTextureKey,
   captainTextureKey,
   itemIconTextureKey,
+  portInteriorTextureKey,
+  portMarkerTextureKey,
 } from "./textureKeys";
-import type { CaptainStyle, FishDefinition, ItemDefinition, PlayerState } from "./types";
+import type { CaptainStyle, FishDefinition, ItemDefinition, PlayerState, PortDefinition } from "./types";
 
 type TextureRequest =
   | { kind: "fish"; fish: FishDefinition }
@@ -16,7 +18,9 @@ type TextureRequest =
   | { kind: "boatSide"; item: ItemDefinition }
   | { kind: "boatMap"; item: ItemDefinition }
   | { kind: "boatFlag"; item: ItemDefinition }
-  | { kind: "captain"; captain: CaptainStyle };
+  | { kind: "captain"; captain: CaptainStyle }
+  | { kind: "portMarker"; port: PortDefinition }
+  | { kind: "portInterior"; port: PortDefinition };
 
 export function fishTexture(fish: FishDefinition | undefined): TextureRequest[] {
   return fish ? [{ kind: "fish", fish }] : [];
@@ -59,6 +63,14 @@ export function fishTexturesForIds(ids: readonly string[]): TextureRequest[] {
 
 export function companionTextures(state: PlayerState): TextureRequest[] {
   return fishTexturesForIds(state.equippedCompanionIds);
+}
+
+export function portMarkerTextures(ports: readonly PortDefinition[]): TextureRequest[] {
+  return ports.map((port) => ({ kind: "portMarker", port }));
+}
+
+export function portInteriorTexture(port: PortDefinition | undefined): TextureRequest[] {
+  return port ? [{ kind: "portInterior", port }] : [];
 }
 
 export async function ensureSvgTextures(scene: Phaser.Scene, requests: TextureRequest[]): Promise<void> {
@@ -108,6 +120,10 @@ function textureKey(request: TextureRequest): string {
       return boatFlagTextureKey(request.item.id);
     case "captain":
       return captainTextureKey(request.captain);
+    case "portMarker":
+      return portMarkerTextureKey(request.port.id);
+    case "portInterior":
+      return portInteriorTextureKey(request.port.id);
   }
 }
 
@@ -128,5 +144,9 @@ function svgFor(
       return factory.boatFlagSvgFor(request.item);
     case "captain":
       return factory.captainSvgFor(request.captain);
+    case "portMarker":
+      return factory.portMarkerSvgFor(request.port);
+    case "portInterior":
+      return factory.portInteriorSvgFor(request.port);
   }
 }

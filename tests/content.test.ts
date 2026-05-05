@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { areas, fish, items, quests, storyChoices } from "../src/game/content";
 import { ports, tradeGoods, tradeQuests } from "../src/game/commerceContent";
 import { gearRoleMeta } from "../src/game/gearRoles";
+import { portVisuals } from "../src/game/portVisuals";
 import { voyageEvents } from "../src/game/voyageEvents";
 import { weatherDefinitions } from "../src/game/weather";
 
@@ -91,6 +92,7 @@ describe("content data", () => {
     expect(questIds.size).toBe(quests.length);
 
     for (const port of ports) {
+      expect(portVisuals[port.id]).toBeTruthy();
       expect(port.specialtyGoodIds.length).toBeGreaterThan(0);
       expect(port.connectedAreaIds.length).toBeGreaterThan(0);
       for (const goodId of [...port.specialtyGoodIds, ...port.demandGoodIds]) {
@@ -100,6 +102,9 @@ describe("content data", () => {
         expect(areaIds.has(areaId)).toBe(true);
       }
     }
+
+    expect(new Set(Object.values(portVisuals).map((visual) => visual.interiorTextureKey)).size).toBe(ports.length);
+    expect(new Set(Object.values(portVisuals).map((visual) => visual.markerTextureKey)).size).toBe(ports.length);
 
     for (const good of tradeGoods) {
       expect(portIds.has(good.originPortId)).toBe(true);
