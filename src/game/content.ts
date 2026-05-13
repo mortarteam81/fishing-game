@@ -1236,6 +1236,24 @@ const baseItems: ItemDefinition[] = [
     shellCost: 80,
     description: "산호초를 지키겠다는 약속이 은은히 빛나요.",
   },
+  {
+    id: "captain-pass-voyager",
+    name: "선장 패스 순항선",
+    kind: "boat",
+    shellCost: 0,
+    description: "선장 패스 보관함에서 열리는 기념 선체예요. 성능보다 추억을 담았어요.",
+    roleTags: ["navigator", "starter"],
+    setId: "captain-pass",
+  },
+  {
+    id: "captain-pass-flag",
+    name: "선장 패스 기념깃발",
+    kind: "boatCosmetic",
+    shellCost: 0,
+    description: "가족 원정의 첫 후원 기록을 담은 따뜻한 깃발이에요.",
+    roleTags: ["starter"],
+    setId: "captain-pass",
+  },
 ];
 
 const gearThemes = [

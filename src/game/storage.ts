@@ -9,12 +9,20 @@ import {
   normalizeTradeRouteHistory,
 } from "./commerce";
 import { normalizeAffinity, normalizeCompanions, normalizeEquippedCompanions, STARTER_COMPANION_ID } from "./companions";
+import {
+  CAPTAIN_PASS_BOAT_ID,
+  CAPTAIN_PASS_FLAG_ID,
+  CAPTAIN_PASS_SAVE_SLOT_COUNT,
+  FREE_SAVE_SLOT_COUNT,
+  createDefaultEntitlements,
+  normalizeEntitlements,
+  saveSlotCountForState,
+} from "./monetization";
 import { seedResearchRecord } from "./research";
 import type { CaptainStyle, ChapterId, DexResearchRecord, PlayerState, VariantCollection, VoyageEventId } from "./types";
 
 const STORAGE_KEY = "banjjakbada-save-v1";
 const SAVE_SLOT_PREFIX = "banjjakbada-save-slot-";
-const SAVE_SLOT_COUNT = 3;
 const COOKIE_MAX_CHUNKS = 10;
 const LOCAL_SAVE_ENDPOINT = "/api/local-save";
 const chapterIds: ChapterId[] = [
@@ -51,10 +59,11 @@ export const defaultCaptain: CaptainStyle = {
 };
 
 export const createInitialState = (): PlayerState => ({
-  saveVersion: 8,
+  saveVersion: 9,
   shells: 35,
   level: 1,
   xp: 0,
+  entitlements: createDefaultEntitlements(),
   chapterProgress: defaultChapterProgress(),
   voyageEventHistory: defaultVoyageEventHistory(),
   collection: {},
@@ -96,7 +105,7 @@ export function loadGame(): PlayerState {
 }
 
 export function saveGame(state: PlayerState): void {
-  const stored = { ...state, saveVersion: 8 };
+  const stored = { ...state, entitlements: normalizeEntitlements(state.entitlements), saveVersion: 9 };
   writeStorageItem(STORAGE_KEY, JSON.stringify(stored));
   writeServerBackup(STORAGE_KEY, stored);
 }
@@ -107,8 +116,9 @@ export function resetGame(): PlayerState {
   return state;
 }
 
-export function getSaveSlots(): SaveSlotSummary[] {
-  return Array.from({ length: SAVE_SLOT_COUNT }, (_, index) => {
+export function getSaveSlots(state?: PlayerState): SaveSlotSummary[] {
+  const slotCount = state ? saveSlotCountForState(state) : FREE_SAVE_SLOT_COUNT;
+  return Array.from({ length: slotCount }, (_, index) => {
     const slotId = index + 1;
     const key = slotKey(slotId);
     const raw = readStorageItem(key);
@@ -131,18 +141,19 @@ export function getSaveSlots(): SaveSlotSummary[] {
 }
 
 export function saveGameToSlot(slotId: number, state: PlayerState): void {
-  if (!isValidSlot(slotId)) {
+  if (!isValidSlot(slotId, saveSlotCountForState(state))) {
     return;
   }
 
   const key = slotKey(slotId);
-  const stored = { ...state, saveVersion: 8, savedAt: new Date().toISOString() };
+  const stored = { ...state, entitlements: normalizeEntitlements(state.entitlements), saveVersion: 9, savedAt: new Date().toISOString() };
   writeStorageItem(key, JSON.stringify(stored));
   writeServerBackup(key, stored);
 }
 
 export function loadGameFromSlot(slotId: number): PlayerState | undefined {
-  if (!isValidSlot(slotId)) {
+  const currentState = normalizeStoredState(parseStoredState(readStorageItem(STORAGE_KEY)) ?? createInitialState());
+  if (!isValidSlot(slotId, saveSlotCountForState(currentState))) {
     return undefined;
   }
 
@@ -205,13 +216,21 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   const companions = normalizeCompanions(parsed.companions, collection);
   const equippedCompanionIds = normalizeEquippedCompanions(parsed.equippedCompanionIds, companions);
   const affinity = normalizeAffinity(parsed.affinity, collection, companions);
+  const entitlements = normalizeEntitlements(parsed.entitlements);
+  const ownedItemIds = Array.from(new Set([
+    ...(parsed.ownedItemIds ?? []),
+    "twig-rod",
+    "harbor-skiff",
+    ...(entitlements.captainPass ? [CAPTAIN_PASS_BOAT_ID, CAPTAIN_PASS_FLAG_ID] : []),
+  ]));
   const levelUnlockedAreaIds = areas
     .filter((area) => !area.hidden && area.requiredLevel <= level)
     .map((area) => area.id);
   return {
     ...initial,
     ...parsed,
-    saveVersion: 8,
+    saveVersion: 9,
+    entitlements,
     activeChapterId: parsed.activeChapterId,
     chapterProgress: normalizeChapterProgress(parsed.chapterProgress),
     voyageEventHistory: normalizeVoyageEventHistory(parsed.voyageEventHistory),
@@ -227,7 +246,7 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
       ...(parsed.captain ?? {}),
     },
     equippedBoatId: parsed.equippedBoatId ?? "harbor-skiff",
-    ownedItemIds: Array.from(new Set([...(parsed.ownedItemIds ?? []), "twig-rod", "harbor-skiff"])),
+    ownedItemIds,
     unlockedAreaIds: Array.from(
       new Set([...(initial.unlockedAreaIds ?? []), ...levelUnlockedAreaIds, ...(parsed.unlockedAreaIds ?? [])]),
     ),
@@ -253,8 +272,8 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   };
 }
 
-function isValidSlot(slotId: number): boolean {
-  return Number.isInteger(slotId) && slotId >= 1 && slotId <= SAVE_SLOT_COUNT;
+function isValidSlot(slotId: number, maxSlots = CAPTAIN_PASS_SAVE_SLOT_COUNT): boolean {
+  return Number.isInteger(slotId) && slotId >= 1 && slotId <= maxSlots;
 }
 
 function slotKey(slotId: number): string {
@@ -262,7 +281,7 @@ function slotKey(slotId: number): string {
 }
 
 function storageKeys(): string[] {
-  return [STORAGE_KEY, ...Array.from({ length: SAVE_SLOT_COUNT }, (_, index) => slotKey(index + 1))];
+  return [STORAGE_KEY, ...Array.from({ length: CAPTAIN_PASS_SAVE_SLOT_COUNT }, (_, index) => slotKey(index + 1))];
 }
 
 function readStorageItem(key: string): string | null {
@@ -304,7 +323,8 @@ function parseStoredState(raw: string | null): StoredPlayerState | undefined {
       parsed.saveVersion !== 5 &&
       parsed.saveVersion !== 6 &&
       parsed.saveVersion !== 7 &&
-      parsed.saveVersion !== 8
+      parsed.saveVersion !== 8 &&
+      parsed.saveVersion !== 9
     ) {
       return undefined;
     }
@@ -327,9 +347,22 @@ function writeServerBackup(key: string, value: StoredPlayerState): void {
 }
 
 function bestStoredState(candidates: Array<StoredPlayerState | undefined>): StoredPlayerState | undefined {
-  return candidates
-    .filter((candidate): candidate is StoredPlayerState => Boolean(candidate))
-    .sort((left, right) => progressScore(right) - progressScore(left))[0];
+  const valid = candidates.filter((candidate): candidate is StoredPlayerState => Boolean(candidate));
+  const best = valid.sort((left, right) => progressScore(right) - progressScore(left))[0];
+  if (!best) {
+    return undefined;
+  }
+
+  const entitlementSource = valid.find((candidate) => normalizeEntitlements(candidate.entitlements).captainPass);
+  if (!entitlementSource || normalizeEntitlements(best.entitlements).captainPass) {
+    return best;
+  }
+
+  return {
+    ...best,
+    entitlements: normalizeEntitlements(entitlementSource.entitlements),
+    ownedItemIds: Array.from(new Set([...(best.ownedItemIds ?? []), CAPTAIN_PASS_BOAT_ID, CAPTAIN_PASS_FLAG_ID])),
+  };
 }
 
 function progressScore(value: StoredPlayerState | undefined): number {

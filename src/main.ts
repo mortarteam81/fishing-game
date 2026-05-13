@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import "./style.css";
 import { BootScene } from "./scenes/BootScene";
 import { CatchResultScene } from "./scenes/CatchResultScene";
+import { CaptainPassScene } from "./scenes/CaptainPassScene";
 import { CharacterScene } from "./scenes/CharacterScene";
 import { CollectionScene } from "./scenes/CollectionScene";
 import { ExchangeScene } from "./scenes/ExchangeScene";
@@ -76,6 +77,7 @@ function startGame() {
       OceanScene,
       FishingScene,
       CatchResultScene,
+      CaptainPassScene,
       CollectionScene,
       ExchangeScene,
       PortScene,

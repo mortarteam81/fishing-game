@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { addPlayerBoat } from "../game/boat";
 import { chapterMeta, chapterOrder, chapterLabel } from "../game/chapters";
+import { trackDayOneReturn, trackEventOnce } from "../game/analytics";
 import { getEquippedCompanionProfiles } from "../game/companions";
 import { addCompanionFollowers } from "../game/companionVisuals";
 import { areas } from "../game/content";
@@ -30,6 +31,7 @@ export class HarborScene extends Phaser.Scene {
   create() {
     this.state = refreshQuestCompletion(loadGame());
     saveGame(this.state);
+    trackDayOneReturn(this.state);
 
     addOceanBackground(this, "harbor");
     addHeader(this, "반짝바다 낚시단", this.state);
@@ -58,6 +60,7 @@ export class HarborScene extends Phaser.Scene {
     if (!this.addStoryChoicePanel()) {
       const starterJourney = getStarterJourney(this.state);
       if (starterJourney) {
+        trackEventOnce("tutorial_started", "tutorial_started", this.state, { scene: "Harbor" });
         this.addStarterJourneyPanel(starterJourney);
       } else {
         this.addChapterPanel();

@@ -306,6 +306,14 @@ export class PortScene extends Phaser.Scene {
       iconKey: "icon-shop",
       iconScale: 0.3,
     });
+    addTextButton(this, 580, 500, "선장 패스", () => this.scene.start("CaptainPass"), {
+      width: 150,
+      height: 44,
+      fontSize: 16,
+      fill: PALETTE.seaFoam,
+      iconKey: "icon-shop",
+      iconScale: 0.3,
+    });
   }
 
   private marketMoodLabel(mood: string): string {

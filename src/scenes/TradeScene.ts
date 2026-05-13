@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { trackEventOnce } from "../game/analytics";
 import {
   availableTradeGoodsForPort,
   buyTradeGood,
@@ -164,9 +165,23 @@ export class TradeScene extends Phaser.Scene {
       fixedWidth: 156,
     }).setOrigin(0, 0.5);
     addTextButton(this, 740, y, this.mode === "buy" ? "1개 사기" : "1개 팔기", () => {
+      const profitBefore = this.state.tradeLedger.totalProfit;
       this.state = this.mode === "buy" ? buyTradeGood(this.state, good.id, 1) : sellTradeGood(this.state, good.id, 1);
       this.state = refreshQuestCompletion(this.state);
       saveGame(this.state);
+      if (this.mode === "buy") {
+        trackEventOnce("first_trade_buy", "first_trade_buy", this.state, {
+          portId: this.state.currentPortId,
+          scene: "Trade",
+        });
+      }
+      if (this.mode === "sell" && this.state.tradeLedger.totalProfit > profitBefore) {
+        trackEventOnce("first_trade_profit", "first_trade_profit", this.state, {
+          portId: this.state.currentPortId,
+          scene: "Trade",
+          value: this.state.tradeLedger.totalProfit - profitBefore,
+        });
+      }
       this.scene.restart({ mode: this.mode, page: this.page });
     }, {
       width: 126,

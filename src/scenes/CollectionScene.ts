@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { trackEventOnce } from "../game/analytics";
 import { companionMoodLabel } from "../game/companions";
 import { areas, fish } from "../game/content";
 import { ensureSvgTextures, fishTexture } from "../game/lazyTextures";
@@ -738,6 +739,11 @@ export class CollectionScene extends Phaser.Scene {
         () => {
           const next = equipCompanion(this.state, entry.id);
           saveGame(next);
+          trackEventOnce("first_companion_equipped", "first_companion_equipped", next, {
+            fishId: entry.id,
+            rarity: entry.rarity,
+            scene: "Collection",
+          });
           this.scene.restart({ page: this.page });
         },
         {

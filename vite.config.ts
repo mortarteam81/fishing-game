@@ -151,6 +151,7 @@ function progressScore(value: unknown): number {
     collection?: unknown;
     ownedItemIds?: unknown;
     unlockedAreaIds?: unknown;
+    entitlements?: unknown;
   };
   const level = typeof state.level === "number" ? state.level : 1;
   const xp = typeof state.xp === "number" ? state.xp : 0;
@@ -161,5 +162,9 @@ function progressScore(value: unknown): number {
       : 0;
   const ownedCount = Array.isArray(state.ownedItemIds) ? state.ownedItemIds.length : 0;
   const areaCount = Array.isArray(state.unlockedAreaIds) ? state.unlockedAreaIds.length : 0;
-  return level * 100000 + xp * 100 + collectionCount * 50 + ownedCount * 20 + areaCount * 20 + shells;
+  const captainPass =
+    state.entitlements && typeof state.entitlements === "object" && "captainPass" in state.entitlements
+      ? (state.entitlements as { captainPass?: unknown }).captainPass === true
+      : false;
+  return level * 100000 + xp * 100 + collectionCount * 50 + ownedCount * 20 + areaCount * 20 + shells + (captainPass ? 500000 : 0);
 }

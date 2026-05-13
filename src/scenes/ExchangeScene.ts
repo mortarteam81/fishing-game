@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { items } from "../game/content";
 import { gearRoleMeta, roleColorForItem, roleLabelsForItem } from "../game/gearRoles";
 import { ensureSvgTextures, itemPreviewTexture } from "../game/lazyTextures";
+import { hasCaptainPass, isCaptainPassItem } from "../game/monetization";
 import { PALETTE, TEXT } from "../game/palette";
 import { buyItem, canBuyItem, equipItem, getEquippedGearBuild, refreshQuestCompletion } from "../game/progression";
 import { loadGame, saveGame } from "../game/storage";
@@ -189,6 +190,7 @@ export class ExchangeScene extends Phaser.Scene {
   private async addItemGrid() {
     const filtered = items.filter((item) =>
       item.kind === this.category &&
+      (!isCaptainPassItem(item.id) || hasCaptainPass(this.state)) &&
       (this.chapterFilter === "all" ? true : this.chapterFilter === "base" ? !item.chapterId : item.chapterId === this.chapterFilter) &&
       (this.roleFilter === "all" ? true : item.roleTags?.includes(this.roleFilter))
     );

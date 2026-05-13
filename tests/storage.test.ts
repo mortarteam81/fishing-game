@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { grantProductEntitlement, hasCaptainPass } from "../src/game/monetization";
 import { createInitialState, getSaveSlots, loadGame, loadGameFromSlot, saveGame, saveGameToSlot } from "../src/game/storage";
 
 function installLocalStorage() {
@@ -193,7 +194,7 @@ describe("save slots", () => {
 
     const loaded = loadGame();
 
-    expect(loaded.saveVersion).toBe(8);
+    expect(loaded.saveVersion).toBe(9);
     expect(loaded.collection["sunny-minnow"]).toBe(4);
     expect(typeof loaded.collection["sunny-minnow"]).toBe("number");
     expect(loaded.researchProgress["sunny-minnow"].catches).toBe(4);
@@ -211,6 +212,7 @@ describe("save slots", () => {
     expect(loaded.visitedPortIds).toContain("sunrise-port");
     expect(loaded.marketState.day).toBe(1);
     expect(loaded.portReputation["sunrise-port"]).toBeGreaterThan(0);
+    expect(loaded.entitlements).toMatchObject({ captainPass: false, purchasedProductIds: [] });
   });
 
   it("round-trips variants through main save and save slots", () => {
@@ -234,5 +236,69 @@ describe("save slots", () => {
     const slots = getSaveSlots();
     expect(slots[0].collectionCount).toBe(1);
     expect(loadGameFromSlot(1)?.variantCollection["sunny-minnow"].aurora).toBe(1);
+  });
+
+  it("migrates captain pass entitlements and opens six save slots", () => {
+    installLocalStorage();
+    const state = grantProductEntitlement({
+      ...createInitialState(),
+      level: 12,
+      ownedItemIds: ["twig-rod", "harbor-skiff"],
+    }, "captain_pass_full", "2026-05-13T00:00:00.000Z");
+
+    saveGame(state);
+    const loaded = loadGame();
+
+    expect(loaded.saveVersion).toBe(9);
+    expect(hasCaptainPass(loaded)).toBe(true);
+    expect(loaded.ownedItemIds).toContain("captain-pass-voyager");
+    expect(loaded.ownedItemIds).toContain("captain-pass-flag");
+    expect(getSaveSlots(loaded)).toHaveLength(6);
+
+    saveGameToSlot(6, loaded);
+    expect(getSaveSlots(loaded)[5].empty).toBe(false);
+    expect(loadGameFromSlot(6)?.level).toBe(12);
+  });
+
+  it("normalizes malformed captain pass entitlement product lists", () => {
+    installLocalStorage();
+    localStorage.setItem(
+      "banjjakbada-save-v1",
+      JSON.stringify({
+        ...createInitialState(),
+        saveVersion: 9,
+        entitlements: {
+          captainPass: true,
+          purchasedProductIds: "captain_pass_full",
+        },
+      }),
+    );
+
+    const loaded = loadGame();
+
+    expect(hasCaptainPass(loaded)).toBe(true);
+    expect(loaded.entitlements.purchasedProductIds).toEqual(["captain_pass_full"]);
+  });
+
+  it("preserves a captain pass entitlement while keeping the highest progress save", () => {
+    installLocalStorage();
+    const current = {
+      ...createInitialState(),
+      level: 80,
+      shells: 5000,
+    };
+    const passSlot = grantProductEntitlement({
+      ...createInitialState(),
+      level: 8,
+      shells: 300,
+    }, "captain_pass_full", "2026-05-13T00:00:00.000Z");
+
+    saveGame(current);
+    saveGameToSlot(1, passSlot);
+    const loaded = loadGameFromSlot(1);
+
+    expect(loaded?.level).toBe(80);
+    expect(hasCaptainPass(loaded!)).toBe(true);
+    expect(loaded?.ownedItemIds).toContain("captain-pass-voyager");
   });
 });

@@ -104,6 +104,12 @@ export type CaptainStyle = {
   accentTint: number;
 };
 
+export type Entitlements = {
+  captainPass: boolean;
+  purchasedProductIds: string[];
+  restoredAt?: string;
+};
+
 export type StoryCondition =
   | {
       kind: "questClaimed";
@@ -404,10 +410,11 @@ export type QuestProgress = {
 };
 
 export type PlayerState = {
-  saveVersion: 8;
+  saveVersion: 9;
   shells: number;
   level: number;
   xp: number;
+  entitlements: Entitlements;
   activeChapterId?: ChapterId;
   chapterProgress: Record<ChapterId, { started: boolean; completed: boolean; score: number }>;
   voyageEventHistory: Record<VoyageEventId, { attempts: number; successes: number; lastOutcome?: "success" | "fail" }>;

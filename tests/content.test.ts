@@ -103,9 +103,9 @@ describe("content data", () => {
 
     expect(itemIds.size).toBe(items.length);
     expect(items.filter((item) => item.kind === "rod")).toHaveLength(75);
-    expect(items.filter((item) => item.kind === "boat")).toHaveLength(69);
+    expect(items.filter((item) => item.kind === "boat")).toHaveLength(70);
     expect(items.filter((item) => item.kind === "bait")).toHaveLength(72);
-    expect(items.filter((item) => item.kind === "boatCosmetic")).toHaveLength(73);
+    expect(items.filter((item) => item.kind === "boatCosmetic")).toHaveLength(74);
     expect(items.filter((item) => item.chapterId && item.kind === "rod")).toHaveLength(30);
     expect(items.filter((item) => item.chapterId && item.kind === "boat")).toHaveLength(30);
     expect(items.filter((item) => item.chapterId && item.kind === "bait")).toHaveLength(30);

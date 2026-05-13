@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { addPlayerBoat } from "../game/boat";
 import { addCompanionBadge, addCompanionFollowers } from "../game/companionVisuals";
 import { getArea } from "../game/content";
+import { trackEventOnce } from "../game/analytics";
 import { playHaptic, stopHaptics } from "../game/haptics";
 import { playSoftTone } from "../game/audio";
 import { getEquippedGearBuild, getReelPower, recordCatch, recordConsolation, refreshQuestCompletion } from "../game/progression";
@@ -319,6 +320,22 @@ export class FishingScene extends Phaser.Scene {
       : recordConsolation(this.state, result.shells, result.xp);
     const refreshed = refreshQuestCompletion(next);
     saveGame(refreshed);
+    if (result.success && result.fish) {
+      trackEventOnce("first_catch", "first_catch", refreshed, {
+        areaId: this.areaId,
+        fishId: result.fish.id,
+        rarity: result.fish.rarity,
+        scene: "Fishing",
+      });
+      if (["rare", "epic", "mythic", "legendary", "ancient"].includes(result.fish.rarity)) {
+        trackEventOnce("first_rare_catch", "first_rare_catch", refreshed, {
+          areaId: this.areaId,
+          fishId: result.fish.id,
+          rarity: result.fish.rarity,
+          scene: "Fishing",
+        });
+      }
+    }
     this.playResultTone(result);
     playHaptic(result.success ? "catch" : "miss");
     this.scene.start("CatchResult", { result, areaId: this.areaId });
