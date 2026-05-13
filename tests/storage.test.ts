@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { buyTradeGood } from "../src/game/commerce";
 import { grantProductEntitlement, hasCaptainPass } from "../src/game/monetization";
+import { getRouteContract, startRouteContract } from "../src/game/routeContracts";
 import { createInitialState, getSaveSlots, loadGame, loadGameFromSlot, saveGame, saveGameToSlot } from "../src/game/storage";
 
 function installLocalStorage() {
@@ -194,7 +196,7 @@ describe("save slots", () => {
 
     const loaded = loadGame();
 
-    expect(loaded.saveVersion).toBe(9);
+    expect(loaded.saveVersion).toBe(10);
     expect(loaded.collection["sunny-minnow"]).toBe(4);
     expect(typeof loaded.collection["sunny-minnow"]).toBe("number");
     expect(loaded.researchProgress["sunny-minnow"].catches).toBe(4);
@@ -249,7 +251,7 @@ describe("save slots", () => {
     saveGame(state);
     const loaded = loadGame();
 
-    expect(loaded.saveVersion).toBe(9);
+    expect(loaded.saveVersion).toBe(10);
     expect(hasCaptainPass(loaded)).toBe(true);
     expect(loaded.ownedItemIds).toContain("captain-pass-voyager");
     expect(loaded.ownedItemIds).toContain("captain-pass-flag");
@@ -278,6 +280,77 @@ describe("save slots", () => {
 
     expect(hasCaptainPass(loaded)).toBe(true);
     expect(loaded.entitlements.purchasedProductIds).toEqual(["captain_pass_full"]);
+  });
+
+  it("clears stranded active route contracts without progress", () => {
+    installLocalStorage();
+    localStorage.setItem(
+      "banjjakbada-save-v1",
+      JSON.stringify({
+        ...createInitialState(),
+        saveVersion: 10,
+        activeRouteContractId: "route-contract-sunrise-coral-1",
+        routeContractProgress: {},
+      }),
+    );
+
+    const loaded = loadGame();
+
+    expect(loaded.activeRouteContractId).toBeUndefined();
+    expect(loaded.routeContractProgress).toEqual({});
+  });
+
+  it("migrates a v9 save to route contract fields while preserving pass and trade state", () => {
+    installLocalStorage();
+    const passState = grantProductEntitlement({
+      ...createInitialState(),
+      level: 72,
+      shells: 4500,
+      tradeLedger: {
+        ...createInitialState().tradeLedger,
+        totalProfit: 1234,
+        deliveredGoods: { "sunrise-port-food@coralworks-port": 2 },
+      },
+      tradeRouteHistory: {
+        "sunrise-port->coralworks-port": { completed: 2, bestProfit: 320, lastCompletedDay: 8 },
+      },
+    }, "captain_pass_full", "2026-05-13T00:00:00.000Z");
+    const legacy = { ...passState, saveVersion: 9 };
+
+    localStorage.setItem("banjjakbada-save-v1", JSON.stringify(legacy));
+
+    const loaded = loadGame();
+
+    expect(loaded.saveVersion).toBe(10);
+    expect(hasCaptainPass(loaded)).toBe(true);
+    expect(loaded.tradeLedger.totalProfit).toBe(1234);
+    expect(loaded.tradeLedger.deliveredGoods["sunrise-port-food@coralworks-port"]).toBe(2);
+    expect(loaded.tradeRouteHistory["sunrise-port->coralworks-port"]?.completed).toBe(2);
+    expect(loaded.routeContractProgress).toEqual({});
+    expect(loaded.routeMilestones).toEqual({});
+  });
+
+  it("keeps an active route contract save over an older higher-shell backup", () => {
+    installLocalStorage();
+    const contract = getRouteContract("route-contract-sunrise-coral-1")!;
+    const older = {
+      ...createInitialState(),
+      level: 30,
+      shells: 10000,
+      currentPortId: contract.fromPortId,
+      visitedPortIds: [contract.fromPortId, contract.toPortId],
+    };
+    let contractSave = startRouteContract(older, contract.id);
+    contractSave = buyTradeGood(contractSave, contract.requiredGoodId, contract.requiredQuantity);
+
+    saveGame(older);
+    saveGameToSlot(1, contractSave);
+
+    const loaded = loadGameFromSlot(1);
+
+    expect(loaded?.activeRouteContractId).toBe(contract.id);
+    expect(loaded?.routeContractProgress[contract.id]).toBeTruthy();
+    expect(loaded?.cargoHold.some((lot) => lot.goodId === contract.requiredGoodId)).toBe(true);
   });
 
   it("preserves a captain pass entitlement while keeping the highest progress save", () => {

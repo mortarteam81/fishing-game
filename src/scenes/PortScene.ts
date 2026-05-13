@@ -6,6 +6,7 @@ import { ensureSvgTextures, portInteriorTexture } from "../game/lazyTextures";
 import { PALETTE, TEXT } from "../game/palette";
 import { getPortVisual } from "../game/portVisuals";
 import { claimQuest, getVisibleQuests, refreshQuestCompletion, stepLabel, stepProgress, stepTarget } from "../game/progression";
+import { availableRouteContracts, getActiveRouteContract, routeContractNextAction, routeContractStage } from "../game/routeContracts";
 import { loadGame, saveGame } from "../game/storage";
 import { portInteriorTextureKey } from "../game/textureKeys";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
@@ -230,9 +231,11 @@ export class PortScene extends Phaser.Scene {
       wordWrap: { width: 300 },
     }).setOrigin(0, 0.5);
 
-    const suggestions = this.routeSuggestions().slice(0, 3);
+    this.addContractSummary();
+
+    const suggestions = this.routeSuggestions().slice(0, 2);
     if (suggestions.length === 0) {
-      this.add.text(546, 378, "교역을 이어가면 추천 항로가 더 또렷해져요.", {
+      this.add.text(546, 410, "교역을 이어가면 추천 항로가 더 또렷해져요.", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "15px",
         fontStyle: "800",
@@ -242,7 +245,7 @@ export class PortScene extends Phaser.Scene {
     }
 
     suggestions.forEach((suggestion, index) => {
-      this.add.text(552, 372 + index * 31, `${index + 1}. ${suggestion}`, {
+      this.add.text(552, 402 + index * 27, `${index + 1}. ${suggestion}`, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "14px",
         fontStyle: "900",
@@ -251,14 +254,42 @@ export class PortScene extends Phaser.Scene {
       }).setOrigin(0, 0.5);
     });
 
-    addTextButton(this, 772, 462, "지도에서 출항", () => this.scene.start("Ocean"), {
-      width: 154,
+    addTextButton(this, 626, 462, "항로 의뢰", () => this.scene.start("RouteContract"), {
+      width: 134,
+      height: 40,
+      fontSize: 15,
+      fill: PALETTE.seaFoam,
+      iconKey: "icon-quest",
+      iconScale: 0.28,
+    });
+    addTextButton(this, 782, 462, "지도 출항", () => this.scene.start("Ocean"), {
+      width: 134,
       height: 40,
       fontSize: 15,
       fill: PALETTE.butter,
       iconKey: "icon-map",
       iconScale: 0.28,
     });
+  }
+
+  private addContractSummary() {
+    const active = getActiveRouteContract(this.state);
+    const available = availableRouteContracts(this.state);
+    const label = active
+      ? `${active.title} · ${routeContractNextAction(this.state, active.id)}`
+      : available.length > 0
+        ? `${available.length}개 항로 의뢰 대기`
+        : "새 항로 의뢰는 조건을 채우면 열려요";
+    const stage = active ? routeContractStage(this.state, active.id) : undefined;
+    this.add.text(546, 368, `항로 의뢰: ${label}`, {
+      fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "13px",
+      fontStyle: "900",
+      color: stage === "sold" ? TEXT.primary : TEXT.secondary,
+      backgroundColor: "rgba(255,251,239,0.58)",
+      padding: { x: 8, y: 4 },
+      fixedWidth: 300,
+    }).setOrigin(0, 0.5);
   }
 
   private routeSuggestions(): string[] {

@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { addPlayerBoat } from "../game/boat";
 import { chapterMeta, chapterOrder, chapterLabel } from "../game/chapters";
 import { trackDayOneReturn, trackEventOnce } from "../game/analytics";
+import { getPort, getTradeGood } from "../game/commerce";
 import { getEquippedCompanionProfiles } from "../game/companions";
 import { addCompanionFollowers } from "../game/companionVisuals";
 import { areas } from "../game/content";
@@ -17,6 +18,13 @@ import {
   nextQuestHint,
   refreshQuestCompletion,
 } from "../game/progression";
+import {
+  availableRouteContracts,
+  getActiveRouteContract,
+  routeContractNextAction,
+  routeContractRequiredEventCleared,
+  routeContractStage,
+} from "../game/routeContracts";
 import { loadGame, saveGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
 import type { ChapterId, PlayerState } from "../game/types";
@@ -313,10 +321,18 @@ export class HarborScene extends Phaser.Scene {
       : nextArea
         ? `${nextArea.name} 항로 조사`
         : meta.description;
+    const activeContract = getActiveRouteContract(this.state);
+    const availableContracts = availableRouteContracts(this.state);
+    const routeText = activeContract
+      ? this.activeContractLogLine(activeContract.id)
+      : availableContracts.length > 0
+        ? `${availableContracts.length}개 항로 의뢰가 현재 항구에 도착했어요.`
+        : "새 항로 의뢰는 항구망에서 조건을 채우면 열려요.";
+    const cta = this.contractLogAction(activeContract?.id);
 
     addPanel(this, 625, 354, 560, 124, PALETTE.paper);
     this.add
-      .text(380, 318, "원정 기록", {
+      .text(380, 318, "선장 항해일지", {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "16px",
         fontStyle: "900",
@@ -324,31 +340,60 @@ export class HarborScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
     this.add
-      .text(380, 344, chapterLabel(chapterId), {
+      .text(380, 344, activeContract?.title ?? chapterLabel(chapterId), {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "24px",
+        fontSize: activeContract && activeContract.title.length > 18 ? "20px" : "24px",
         fontStyle: "900",
         color: TEXT.primary,
+        fixedWidth: 340,
       })
       .setOrigin(0, 0.5);
     this.add
-      .text(380, 374, `${progressText} · 다음 목표: ${targetText}`, {
+      .text(380, 374, `${routeText} · 원정 ${progressText}: ${targetText}`, {
         fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
         fontSize: "15px",
         fontStyle: "800",
         color: TEXT.secondary,
-        wordWrap: { width: 485 },
+        wordWrap: { width: 486 },
       })
       .setOrigin(0, 0.5);
 
-    addTextButton(this, 746, 402, "원정 보기", () => this.scene.start("Quest"), {
+    addTextButton(this, 746, 402, cta.label, () => this.scene.start(cta.scene, cta.data), {
       width: 150,
       height: 42,
       fontSize: 15,
-      fill: meta.color,
-      iconKey: "icon-quest",
+      fill: cta.fill ?? meta.color,
+      iconKey: cta.iconKey,
       iconScale: 0.28,
     });
+  }
+
+  private activeContractLogLine(contractId: string): string {
+    const contract = getActiveRouteContract(this.state);
+    if (!contract) {
+      return "항로 의뢰를 고를 차례예요.";
+    }
+    const good = getTradeGood(contract.requiredGoodId);
+    const destination = getPort(contract.toPortId);
+    return `${good?.name ?? "화물"} ${contract.requiredQuantity}개 → ${destination?.name ?? "목적지"} · 다음: ${routeContractNextAction(this.state, contractId)}`;
+  }
+
+  private contractLogAction(contractId?: string): { label: string; scene: string; data?: object; fill?: number; iconKey: string } {
+    const contract = contractId ? getActiveRouteContract(this.state) : undefined;
+    const stage = contract ? routeContractStage(this.state, contract.id) : undefined;
+    if (!contract || stage === "claimed") {
+      return { label: "항로 보기", scene: "RouteContract", fill: PALETTE.seaFoam, iconKey: "icon-quest" };
+    }
+    if (stage === "sold") {
+      return { label: "보상 받기", scene: "RouteContract", fill: PALETTE.butter, iconKey: "icon-shell" };
+    }
+    if (stage === "accepted" && this.state.currentPortId === contract.fromPortId) {
+      return { label: "화물 싣기", scene: "Trade", data: { mode: "buy" }, fill: PALETTE.butter, iconKey: "icon-shop" };
+    }
+    if (stage === "sailed" && this.state.currentPortId === contract.toPortId && routeContractRequiredEventCleared(this.state, contract)) {
+      return { label: "화물 팔기", scene: "Trade", data: { mode: "sell" }, fill: PALETTE.seaFoam, iconKey: "icon-shell" };
+    }
+    return { label: "항해하기", scene: "Ocean", fill: PALETTE.butter, iconKey: "icon-map" };
   }
 
   private resolveChapterId(preferred?: ChapterId): ChapterId {

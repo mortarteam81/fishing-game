@@ -83,7 +83,13 @@ export type VoyageEventId =
   | "deep-shadow"
   | "pirate-crab"
   | "storm-spout"
-  | "reef-maze";
+  | "reef-maze"
+  | "ghost-lighthouse"
+  | "drifting-crate"
+  | "mischievous-pirate-crab-swarm"
+  | "starlight-backflow"
+  | "deep-sea-bell"
+  | "black-reef-vortex";
 
 export type GearRole =
   | "starter"
@@ -182,6 +188,14 @@ export type StoryCondition =
       fromPortId: string;
       toPortId: string;
       count: number;
+    }
+  | {
+      kind: "routeContractCompleted";
+      contractId: string;
+    }
+  | {
+      kind: "routeMilestoneReached";
+      milestoneId: string;
     };
 
 export type StoryRewards = {
@@ -375,6 +389,14 @@ export type QuestStep =
       fromPortId: string;
       toPortId: string;
       count: number;
+    }
+  | {
+      kind: "routeContractCompleted";
+      contractId: string;
+    }
+  | {
+      kind: "routeMilestoneReached";
+      milestoneId: string;
     };
 
 export type QuestDefinition = {
@@ -409,8 +431,42 @@ export type QuestProgress = {
   claimed: boolean;
 };
 
+export type RouteContractStage = "accepted" | "cargo-ready" | "sailed" | "sold" | "claimed";
+
+export type RouteContractProgress = {
+  contractId: string;
+  acceptedAtDay: number;
+  deliveredQuantityAtStart: number;
+  routeCompletionsAtStart: number;
+  eventSuccessesAtStart: number;
+  requiredEventDeliveredQuantityAtClear?: number;
+  claimed: boolean;
+};
+
+export type RouteMilestones = Record<string, boolean>;
+
+export type RouteContractDefinition = {
+  id: string;
+  title: string;
+  chapterId?: ChapterId;
+  fromPortId: string;
+  toPortId: string;
+  requiredLevel: number;
+  requiredGoodId: string;
+  requiredQuantity: number;
+  recommendedRole: GearRole;
+  requiredEventId?: VoyageEventId;
+  bonusEventId?: VoyageEventId;
+  requirements?: StoryCondition[];
+  rewards: StoryRewards;
+  effects?: StoryEffect;
+  milestoneId: string;
+  intro: string;
+  successText: string;
+};
+
 export type PlayerState = {
-  saveVersion: 9;
+  saveVersion: 10;
   shells: number;
   level: number;
   xp: number;
@@ -442,6 +498,9 @@ export type PlayerState = {
   tradeLedger: TradeLedger;
   marketState: MarketState;
   tradeRouteHistory: Record<string, TradeRouteRecord>;
+  activeRouteContractId?: string;
+  routeContractProgress: Record<string, RouteContractProgress>;
+  routeMilestones: RouteMilestones;
   muted: boolean;
 };
 

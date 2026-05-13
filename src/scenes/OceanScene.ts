@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { addPlayerBoat, boatWakeTint } from "../game/boat";
 import { ports } from "../game/commerceContent";
-import { getPort, isPortUnlocked, sailToPort } from "../game/commerce";
+import { getPort, getTradeGood, isPortUnlocked, sailToPort } from "../game/commerce";
 import { addCompanionFollowers } from "../game/companionVisuals";
 import { areas, fish } from "../game/content";
 import { fixedContentOffset, fixedScreenCenterX, sceneGameWidth } from "../game/layout";
@@ -19,6 +19,12 @@ import {
   recordVoyageEventResult,
   requiredVoyageEventForArea,
 } from "../game/progression";
+import {
+  getActiveRouteContract,
+  routeContractNextAction,
+  routeContractRequiredEventStatus,
+  routeContractStage,
+} from "../game/routeContracts";
 import { loadGame, saveGame } from "../game/storage";
 import { addMuteButton, addTextButton } from "../game/ui";
 import { getVoyageEvent, voyageEventForArea } from "../game/voyageEvents";
@@ -192,13 +198,20 @@ export class OceanScene extends Phaser.Scene {
   private voyageEventDirection = 1;
   private voyageEventArea?: AreaDefinition;
   private voyageEventId?: VoyageEventId;
+  private voyageEventContractId?: string;
   private voyageEventActive = false;
+  private notice?: string;
 
   constructor() {
     super("Ocean");
   }
 
-  create() {
+  init(data?: { notice?: string }) {
+    this.notice = data?.notice;
+  }
+
+  create(data?: { notice?: string }) {
+    this.notice = data?.notice ?? this.notice;
     this.state = loadGame();
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setZoom(1);
@@ -528,6 +541,25 @@ export class OceanScene extends Phaser.Scene {
       .setOrigin(0, 0.5);
     fixed.add(this.weatherText);
 
+    if (this.notice) {
+      fixed.add(
+        this.add
+          .text(480, 82, this.notice, {
+            fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+            fontSize: "15px",
+            fontStyle: "900",
+            color: TEXT.primary,
+            backgroundColor: "rgba(255,251,239,0.78)",
+            padding: { x: 10, y: 4 },
+            fixedWidth: 560,
+            align: "center",
+          })
+          .setOrigin(0.5),
+      );
+    }
+
+    this.addContractRouteHud(offset, fixed);
+
     addTextButton(this, offset + 84, 500, "항구", () => this.scene.start("Harbor"), {
       width: 120,
       height: 44,
@@ -537,6 +569,104 @@ export class OceanScene extends Phaser.Scene {
       iconScale: 0.34,
     }).setScrollFactor(0).setDepth(60);
     addMuteButton(this, offset + 880, 500).setScrollFactor(0).setDepth(60);
+  }
+
+  private addContractRouteHud(offset: number, fixed: Phaser.GameObjects.Container) {
+    const contract = getActiveRouteContract(this.state);
+    if (!contract) {
+      return;
+    }
+    const destination = getPort(contract.toPortId);
+    const origin = getPort(contract.fromPortId);
+    const good = getTradeGood(contract.requiredGoodId);
+    const stage = routeContractStage(this.state, contract.id);
+    const eventStatus = routeContractRequiredEventStatus(this.state, contract);
+    const eventPending = Boolean(eventStatus?.eventId && !eventStatus.cleared && (stage === "cargo-ready" || stage === "sailed"));
+    const buttonLabel = eventPending
+      ? "필수 이벤트"
+      : stage === "accepted" && this.state.currentPortId === contract.fromPortId
+        ? "시장으로"
+        : stage === "accepted"
+          ? "출발 항구"
+          : stage === "sailed" && this.state.currentPortId === contract.toPortId && eventStatus?.cleared
+            ? "판매하기"
+            : "목표 항구";
+    const panel = this.add.rectangle(480, 136, 620, 72, PALETTE.paper, 0.88).setStrokeStyle(3, PALETTE.ink, 0.74);
+    fixed.add(panel);
+    fixed.add(
+      this.add
+        .text(188, 116, `항로 의뢰: ${contract.title}`, {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: contract.title.length > 18 ? "15px" : "17px",
+          fontStyle: "900",
+          color: TEXT.primary,
+          fixedWidth: 396,
+        })
+        .setOrigin(0, 0.5),
+    );
+    fixed.add(
+      this.add
+        .text(188, 141, `${good?.name ?? "화물"} ${contract.requiredQuantity}개 → ${destination?.name ?? "목적지"} · ${routeContractNextAction(this.state, contract.id)}`, {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "13px",
+          fontStyle: "800",
+          color: TEXT.secondary,
+          fixedWidth: 396,
+        })
+        .setOrigin(0, 0.5),
+    );
+    fixed.add(
+      this.add
+        .text(188, 162, eventPending ? `필수 이벤트 대기: ${eventStatus?.label ?? "위험 항로"}` : this.routeHudHint(stage, origin?.name, destination?.name), {
+          fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+          fontSize: "12px",
+          fontStyle: "900",
+          color: eventPending ? TEXT.primary : TEXT.secondary,
+          fixedWidth: 396,
+        })
+        .setOrigin(0, 0.5),
+    );
+
+    addTextButton(this, offset + 742, 136, buttonLabel, () => {
+      if (eventPending) {
+        this.startContractVoyageEvent(contract.id);
+        return;
+      }
+      if (stage === "accepted" && this.state.currentPortId === contract.fromPortId) {
+        this.scene.start("Trade", { mode: "buy" });
+        return;
+      }
+      if (stage === "accepted" && origin) {
+        this.selectPortTarget(origin);
+        return;
+      }
+      if (stage === "sailed" && this.state.currentPortId === contract.toPortId && eventStatus?.cleared) {
+        this.scene.start("Trade", { mode: "sell" });
+        return;
+      }
+      if (destination) {
+        this.selectPortTarget(destination);
+      }
+    }, {
+      width: 136,
+      height: 42,
+      fontSize: 15,
+      fill: eventPending ? PALETTE.butter : PALETTE.seaFoam,
+      iconKey: eventPending ? "icon-quest" : "icon-map",
+      iconScale: 0.28,
+    }).setScrollFactor(0).setDepth(64);
+  }
+
+  private routeHudHint(stage: ReturnType<typeof routeContractStage>, originName?: string, destinationName?: string) {
+    if (stage === "accepted") {
+      return this.state.activeRouteContractId && this.state.currentPortId === getActiveRouteContract(this.state)?.fromPortId
+        ? "먼저 시장에서 계약 화물을 실어요"
+        : `${originName ?? "출발 항구"}에서 화물을 준비해요`;
+    }
+    if (stage === "sailed") {
+      return `${destinationName ?? "목적지"}에서 판매하면 보상을 받을 수 있어요`;
+    }
+    return `${destinationName ?? "목적지"} 도크에서 입항할 수 있어요`;
   }
 
   private createCompass(x: number, y: number) {
@@ -920,14 +1050,28 @@ export class OceanScene extends Phaser.Scene {
     return `Lv.${area.requiredLevel} 열림`;
   }
 
-  private startVoyageEvent(area: AreaDefinition, eventId: VoyageEventId) {
+  private startContractVoyageEvent(contractId: string) {
+    const contract = getActiveRouteContract(this.state);
+    const status = contract?.id === contractId ? routeContractRequiredEventStatus(this.state, contract) : undefined;
+    if (!contract || !status?.eventId || status.cleared) {
+      this.statusText?.setText("필수 항로 이벤트는 이미 기록됐어요.");
+      return;
+    }
+    this.startVoyageEvent(undefined, status.eventId, contract.id);
+  }
+
+  private startVoyageEvent(area: AreaDefinition | undefined, eventId: VoyageEventId, contractId?: string) {
     if (this.voyageEventActive) {
       return;
     }
 
-    const event = getVoyageEvent(eventId) ?? voyageEventForArea(area);
+    const event = getVoyageEvent(eventId) ?? (area ? voyageEventForArea(area) : undefined);
+    if (!event) {
+      return;
+    }
     this.voyageEventArea = area;
     this.voyageEventId = event.id;
+    this.voyageEventContractId = contractId;
     this.voyageEventScore = 0;
     this.voyageEventDirection = 1;
     this.voyageEventActive = true;
@@ -982,22 +1126,25 @@ export class OceanScene extends Phaser.Scene {
   }
 
   private resolveVoyageEvent(forceFail: boolean) {
-    if (!this.voyageEventActive || !this.voyageEventId || !this.voyageEventArea) {
+    if (!this.voyageEventActive || !this.voyageEventId) {
       return;
     }
     const event = getVoyageEvent(this.voyageEventId);
+    const contractEvent = this.voyageEventContractId;
     const success = !forceFail && Math.abs(this.voyageEventScore - 0.5) <= this.voyageEventWindow();
     this.voyageEventActive = false;
     this.voyageEventGroup?.destroy(true);
     this.voyageEventGroup = undefined;
     const updated = recordVoyageEventResult(this.state, this.voyageEventId, success);
-    const discovered = success && canDiscoverArea(updated, this.voyageEventArea)
+    const discovered = !contractEvent && this.voyageEventArea && success && canDiscoverArea(updated, this.voyageEventArea)
       ? discoverArea(updated, this.voyageEventArea.id)
       : updated;
     saveGame(discovered);
     playSoftTone(this, discovered, success ? 760 : 420, 0.1);
-    this.statusText?.setText(success ? event?.successText ?? "위험 항로 통과!" : event?.failText ?? "다시 도전할 수 있어요.");
-    this.scene.restart();
+    const notice = success ? event?.successText ?? "위험 항로 통과!" : event?.failText ?? "다시 도전할 수 있어요.";
+    this.statusText?.setText(notice);
+    this.voyageEventContractId = undefined;
+    this.scene.restart({ notice });
   }
 
   private voyageEventWindow() {

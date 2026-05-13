@@ -14,6 +14,7 @@ import {
 } from "../game/commerce";
 import { PALETTE, TEXT } from "../game/palette";
 import { refreshQuestCompletion } from "../game/progression";
+import { getActiveRouteContract, routeContractRequiredEventCleared, routeContractRequiresGood } from "../game/routeContracts";
 import { loadGame, saveGame } from "../game/storage";
 import { addHeader, addMuteButton, addOceanBackground, addPanel, addTextButton } from "../game/ui";
 import type { PlayerState, TradeGoodDefinition } from "../game/types";
@@ -50,19 +51,31 @@ export class TradeScene extends Phaser.Scene {
 
   private addSummary() {
     const port = getPort(this.state.currentPortId);
-    addPanel(this, 480, 96, 760, 74, PALETTE.paper);
-    this.add.text(124, 84, `${port?.name ?? "항구"} 시장`, {
+    const active = getActiveRouteContract(this.state);
+    const contractGood = active ? getTradeGood(active.requiredGoodId) : undefined;
+    const contractDestination = active ? getPort(active.toPortId) : undefined;
+    addPanel(this, 480, 101, 760, 84, PALETTE.paper);
+    this.add.text(124, 78, `${port?.name ?? "항구"} 시장`, {
       fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
       fontSize: "23px",
       fontStyle: "900",
       color: TEXT.primary,
     }).setOrigin(0, 0.5);
-    this.add.text(124, 114, `화물 ${getUsedCargoVolume(this.state)}/${getCargoCapacity(this.state)} · 순이익 ${this.state.tradeLedger.totalProfit} · 교역일 ${this.state.marketState.day}`, {
+    this.add.text(124, 106, `화물 ${getUsedCargoVolume(this.state)}/${getCargoCapacity(this.state)} · 순이익 ${this.state.tradeLedger.totalProfit} · 교역일 ${this.state.marketState.day}`, {
       fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
       fontSize: "16px",
       fontStyle: "900",
       color: TEXT.secondary,
     }).setOrigin(0, 0.5);
+    if (active) {
+      this.add.text(124, 128, `항로 의뢰: ${contractGood?.name ?? "화물"} ${active.requiredQuantity}개 → ${contractDestination?.name ?? "목적지"}`, {
+        fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "13px",
+        fontStyle: "900",
+        color: TEXT.primary,
+        fixedWidth: 520,
+      }).setOrigin(0, 0.5);
+    }
     this.add.text(820, 99, `조개 ${this.state.shells}`, {
       fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
       fontSize: "21px",
@@ -137,9 +150,13 @@ export class TradeScene extends Phaser.Scene {
     if (!quote) {
       return;
     }
+    const active = getActiveRouteContract(this.state);
+    const contractMatch = active ? routeContractRequiresGood(active, good.id) : false;
     const owned = this.state.cargoHold.filter((lot) => lot.goodId === good.id).reduce((sum, lot) => sum + lot.quantity, 0);
-    const canAct = this.mode === "buy" ? canBuyTradeGood(this.state, good.id, 1) : owned > 0;
-    addPanel(this, 480, y, 760, 46, this.mode === "buy" ? PALETTE.warmCream : PALETTE.paper);
+    const requiredEventBlocksSale = this.mode === "sell" &&
+      Boolean(active && contractMatch && this.state.currentPortId === active.toPortId && !routeContractRequiredEventCleared(this.state, active));
+    const canAct = this.mode === "buy" ? canBuyTradeGood(this.state, good.id, 1) : owned > 0 && !requiredEventBlocksSale;
+    addPanel(this, 480, y, 760, 46, contractMatch ? 0xffe0b8 : this.mode === "buy" ? PALETTE.warmCream : PALETTE.paper);
     this.add.text(124, y - 10, `${good.name} · ${this.categoryLabel(good.category)} · 부피 ${good.volume}`, {
       fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
       fontSize: "17px",
@@ -147,11 +164,11 @@ export class TradeScene extends Phaser.Scene {
       color: TEXT.primary,
       fixedWidth: 280,
     }).setOrigin(0, 0.5);
-    this.add.text(124, y + 12, this.mode === "buy" ? quote.detail : `보유 ${owned} · 평균가 ${this.averageCost(good.id)}`, {
+    this.add.text(124, y + 12, contractMatch ? `항로 의뢰 화물 · ${requiredEventBlocksSale ? "필수 이벤트 먼저 통과" : this.mode === "buy" ? quote.detail : `보유 ${owned} · 목적지 판매`}` : this.mode === "buy" ? quote.detail : `보유 ${owned} · 평균가 ${this.averageCost(good.id)}`, {
       fontFamily: "Apple SD Gothic Neo, Noto Sans KR, sans-serif",
       fontSize: "12px",
       fontStyle: "800",
-      color: TEXT.secondary,
+      color: contractMatch ? TEXT.primary : TEXT.secondary,
       fixedWidth: 280,
     }).setOrigin(0, 0.5);
     this.add.rectangle(536, y, 150, 30, this.trendFill(quote.trend), 0.94)
@@ -164,7 +181,7 @@ export class TradeScene extends Phaser.Scene {
       color: TEXT.primary,
       fixedWidth: 156,
     }).setOrigin(0, 0.5);
-    addTextButton(this, 740, y, this.mode === "buy" ? "1개 사기" : "1개 팔기", () => {
+    addTextButton(this, 740, y, requiredEventBlocksSale ? "이벤트 먼저" : this.mode === "buy" ? "1개 사기" : "1개 팔기", () => {
       const profitBefore = this.state.tradeLedger.totalProfit;
       this.state = this.mode === "buy" ? buyTradeGood(this.state, good.id, 1) : sellTradeGood(this.state, good.id, 1);
       this.state = refreshQuestCompletion(this.state);

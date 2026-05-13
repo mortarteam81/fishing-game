@@ -11,6 +11,7 @@ import { HarborScene } from "./scenes/HarborScene";
 import { OceanScene } from "./scenes/OceanScene";
 import { PortScene } from "./scenes/PortScene";
 import { QuestScene } from "./scenes/QuestScene";
+import { RouteContractScene } from "./scenes/RouteContractScene";
 import { SaveScene } from "./scenes/SaveScene";
 import { TradeScene } from "./scenes/TradeScene";
 import { getAdaptiveGameSize } from "./game/layout";
@@ -81,6 +82,7 @@ function startGame() {
       CollectionScene,
       ExchangeScene,
       PortScene,
+      RouteContractScene,
       TradeScene,
       QuestScene,
       CharacterScene,

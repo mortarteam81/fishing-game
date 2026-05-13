@@ -19,6 +19,7 @@ import {
   saveSlotCountForState,
 } from "./monetization";
 import { seedResearchRecord } from "./research";
+import { getRouteContract, normalizeRouteContractProgress, normalizeRouteMilestones } from "./routeContracts";
 import type { CaptainStyle, ChapterId, DexResearchRecord, PlayerState, VariantCollection, VoyageEventId } from "./types";
 
 const STORAGE_KEY = "banjjakbada-save-v1";
@@ -59,7 +60,7 @@ export const defaultCaptain: CaptainStyle = {
 };
 
 export const createInitialState = (): PlayerState => ({
-  saveVersion: 9,
+  saveVersion: 10,
   shells: 35,
   level: 1,
   xp: 0,
@@ -90,6 +91,9 @@ export const createInitialState = (): PlayerState => ({
   tradeLedger: normalizeTradeLedger(undefined),
   marketState: createInitialMarketState(),
   tradeRouteHistory: {},
+  activeRouteContractId: undefined,
+  routeContractProgress: {},
+  routeMilestones: {},
   muted: false,
 });
 
@@ -105,7 +109,7 @@ export function loadGame(): PlayerState {
 }
 
 export function saveGame(state: PlayerState): void {
-  const stored = { ...state, entitlements: normalizeEntitlements(state.entitlements), saveVersion: 9 };
+  const stored = { ...state, entitlements: normalizeEntitlements(state.entitlements), saveVersion: 10 };
   writeStorageItem(STORAGE_KEY, JSON.stringify(stored));
   writeServerBackup(STORAGE_KEY, stored);
 }
@@ -146,7 +150,7 @@ export function saveGameToSlot(slotId: number, state: PlayerState): void {
   }
 
   const key = slotKey(slotId);
-  const stored = { ...state, entitlements: normalizeEntitlements(state.entitlements), saveVersion: 9, savedAt: new Date().toISOString() };
+  const stored = { ...state, entitlements: normalizeEntitlements(state.entitlements), saveVersion: 10, savedAt: new Date().toISOString() };
   writeStorageItem(key, JSON.stringify(stored));
   writeServerBackup(key, stored);
 }
@@ -229,7 +233,7 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
   return {
     ...initial,
     ...parsed,
-    saveVersion: 9,
+    saveVersion: 10,
     entitlements,
     activeChapterId: parsed.activeChapterId,
     chapterProgress: normalizeChapterProgress(parsed.chapterProgress),
@@ -269,6 +273,9 @@ function normalizeStoredState(parsed: StoredPlayerState): PlayerState {
     tradeLedger: normalizeTradeLedger(parsed.tradeLedger),
     marketState: normalizeMarketState(parsed.marketState),
     tradeRouteHistory: normalizeTradeRouteHistory(parsed.tradeRouteHistory),
+    activeRouteContractId: normalizeActiveRouteContractId(parsed.activeRouteContractId, parsed.routeContractProgress),
+    routeContractProgress: normalizeRouteContractProgress(parsed.routeContractProgress),
+    routeMilestones: normalizeRouteMilestones(parsed.routeMilestones),
   };
 }
 
@@ -324,7 +331,8 @@ function parseStoredState(raw: string | null): StoredPlayerState | undefined {
       parsed.saveVersion !== 6 &&
       parsed.saveVersion !== 7 &&
       parsed.saveVersion !== 8 &&
-      parsed.saveVersion !== 9
+      parsed.saveVersion !== 9 &&
+      parsed.saveVersion !== 10
     ) {
       return undefined;
     }
@@ -332,6 +340,21 @@ function parseStoredState(raw: string | null): StoredPlayerState | undefined {
   } catch {
     return undefined;
   }
+}
+
+function normalizeActiveRouteContractId(
+  contractId: string | undefined,
+  progress: StoredPlayerState["routeContractProgress"],
+): string | undefined {
+  if (!contractId || !getRouteContract(contractId)) {
+    return undefined;
+  }
+  const normalizedProgress = normalizeRouteContractProgress(progress);
+  const contractProgress = normalizedProgress[contractId];
+  if (!contractProgress || contractProgress.claimed) {
+    return undefined;
+  }
+  return contractId;
 }
 
 function writeServerBackup(key: string, value: StoredPlayerState): void {
@@ -380,6 +403,16 @@ function progressScore(value: StoredPlayerState | undefined): number {
       sum + Object.values(variants ?? {}).reduce((variantSum, count) => variantSum + Math.max(0, count ?? 0), 0),
     0,
   );
+  const cargoInvestment = Object.values(value.cargoHold ?? {}).reduce(
+    (sum, lot) => sum + Math.max(0, lot?.averageCost ?? 0) * Math.max(0, lot?.quantity ?? 0) * Math.max(0.55, lot?.condition ?? 1),
+    0,
+  );
+  const activeContractProgress = value.activeRouteContractId && value.routeContractProgress?.[value.activeRouteContractId] ? 1800 : 0;
+  const routeContractScore = Object.values(value.routeContractProgress ?? {}).reduce(
+    (sum, progress) => sum + (progress?.claimed ? 2800 : 900) + Math.max(0, progress?.routeCompletionsAtStart ?? 0) * 120,
+    0,
+  );
+  const routeMilestoneScore = Object.values(value.routeMilestones ?? {}).filter(Boolean).length * 2200;
   return (
     (value.level ?? 1) * 100000 +
     (value.xp ?? 0) * 100 +
@@ -391,7 +424,12 @@ function progressScore(value: StoredPlayerState | undefined): number {
     Object.values(value.voyageEventHistory ?? {}).reduce((sum, record) => sum + (record?.successes ?? 0) * 180 + (record?.attempts ?? 0) * 20, 0) +
     Object.values(value.chapterProgress ?? {}).reduce((sum, record) => sum + (record?.score ?? 0), 0) +
     (value.tradeLedger?.totalProfit ?? 0) +
+    (value.tradeLedger?.totalSpend ?? 0) * 0.65 +
     (value.tradeLedger?.completedRoutes ?? 0) * 250 +
+    cargoInvestment +
+    activeContractProgress +
+    routeContractScore +
+    routeMilestoneScore +
     Object.values(value.portReputation ?? {}).reduce((sum, reputation) => sum + Math.max(0, reputation ?? 0), 0) * 14 +
     (value.visitedPortIds?.length ?? 0) * 160 +
     (value.discoveredAreaIds?.length ?? 0) * 120 +
@@ -481,6 +519,12 @@ function defaultVoyageEventHistory(): PlayerState["voyageEventHistory"] {
     "pirate-crab": { attempts: 0, successes: 0 },
     "storm-spout": { attempts: 0, successes: 0 },
     "reef-maze": { attempts: 0, successes: 0 },
+    "ghost-lighthouse": { attempts: 0, successes: 0 },
+    "drifting-crate": { attempts: 0, successes: 0 },
+    "mischievous-pirate-crab-swarm": { attempts: 0, successes: 0 },
+    "starlight-backflow": { attempts: 0, successes: 0 },
+    "deep-sea-bell": { attempts: 0, successes: 0 },
+    "black-reef-vortex": { attempts: 0, successes: 0 },
   };
 }
 

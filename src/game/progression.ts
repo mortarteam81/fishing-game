@@ -14,6 +14,13 @@ import {
   previewResearchCatch,
   seedResearchRecord,
 } from "./research";
+import {
+  getRouteContract,
+  markRouteContractRequiredEventCleared,
+  routeContractCompleted,
+  routeContracts,
+  routeMilestoneReached,
+} from "./routeContracts";
 import { getVoyageEvent, voyageEventCleared } from "./voyageEvents";
 import type {
   AreaDefinition,
@@ -373,6 +380,10 @@ export function stepProgress(state: PlayerState, step: QuestStep): number {
       return Math.min(state.tradeLedger.deliveredGoods[deliveredGoodKey(step.goodId, step.portId)] ?? 0, step.quantity);
     case "completeTradeRoute":
       return Math.min(state.tradeRouteHistory[routeKey(step.fromPortId, step.toPortId)]?.completed ?? 0, step.count);
+    case "routeContractCompleted":
+      return routeContractCompleted(state, step.contractId) ? 1 : 0;
+    case "routeMilestoneReached":
+      return routeMilestoneReached(state, step.milestoneId) ? 1 : 0;
   }
 }
 
@@ -389,6 +400,8 @@ export function stepTarget(step: QuestStep): number {
     case "clearVoyageEvent":
     case "discoverArea":
     case "portVisited":
+    case "routeContractCompleted":
+    case "routeMilestoneReached":
       return 1;
     case "researchRank":
       return step.rank;
@@ -446,6 +459,10 @@ export function stepLabel(step: QuestStep): string {
       return `${getTradeGood(step.goodId)?.name ?? "교역품"} ${step.quantity}개 납품`;
     case "completeTradeRoute":
       return `${getPort(step.fromPortId)?.name ?? "출발항"} → ${getPort(step.toPortId)?.name ?? "도착항"} ${step.count}회`;
+    case "routeContractCompleted":
+      return `${getRouteContract(step.contractId)?.title ?? "항로 계약"} 완료`;
+    case "routeMilestoneReached":
+      return `항로 이정표: ${routeContracts.find((contract) => contract.milestoneId === step.milestoneId)?.title ?? "계약"} 달성`;
   }
 }
 
@@ -493,6 +510,10 @@ export function conditionMet(state: PlayerState, condition: StoryCondition): boo
       return state.tradeLedger.totalProfit >= condition.profit;
     case "completeTradeRoute":
       return (state.tradeRouteHistory[routeKey(condition.fromPortId, condition.toPortId)]?.completed ?? 0) >= condition.count;
+    case "routeContractCompleted":
+      return routeContractCompleted(state, condition.contractId);
+    case "routeMilestoneReached":
+      return routeMilestoneReached(state, condition.milestoneId);
   }
 }
 
@@ -572,7 +593,8 @@ export function recordVoyageEventResult(
     },
     success ? reward.affinity : Math.max(1, Math.floor(reward.affinity / 2)),
   );
-  const progressed = markChapterProgress(withReward, state.activeChapterId, success ? 90 : 25);
+  const withRouteProgress = success ? markRouteContractRequiredEventCleared(withReward, eventId) : withReward;
+  const progressed = markChapterProgress(withRouteProgress, state.activeChapterId, success ? 90 : 25);
   return addXp(progressed, Math.round(reward.xp * (success ? 1 : 0.38)));
 }
 

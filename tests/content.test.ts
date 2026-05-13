@@ -3,6 +3,7 @@ import { areas, fish, items, quests, storyChoices } from "../src/game/content";
 import { ports, tradeGoods, tradeQuests } from "../src/game/commerceContent";
 import { gearRoleMeta } from "../src/game/gearRoles";
 import { portVisuals } from "../src/game/portVisuals";
+import { routeContracts } from "../src/game/routeContracts";
 import { voyageEvents } from "../src/game/voyageEvents";
 import { weatherDefinitions } from "../src/game/weather";
 
@@ -123,6 +124,18 @@ describe("content data", () => {
     expect(ports).toHaveLength(10);
     expect(tradeGoods).toHaveLength(60);
     expect(tradeQuests).toHaveLength(24);
+    expect(routeContracts).toHaveLength(24);
+    expect(voyageEvents).toHaveLength(11);
+    expect([...eventIds]).toEqual(
+      expect.arrayContaining([
+        "ghost-lighthouse",
+        "drifting-crate",
+        "mischievous-pirate-crab-swarm",
+        "starlight-backflow",
+        "deep-sea-bell",
+        "black-reef-vortex",
+      ]),
+    );
     expect(portIds.size).toBe(ports.length);
     expect(tradeGoodIds.size).toBe(tradeGoods.length);
     expect(quests).toHaveLength(39);
@@ -149,6 +162,20 @@ describe("content data", () => {
       expect(good.volume).toBeGreaterThan(0);
       for (const portId of good.demandPortIds) {
         expect(portIds.has(portId)).toBe(true);
+      }
+    }
+
+    for (const contract of routeContracts) {
+      expect(portIds.has(contract.fromPortId)).toBe(true);
+      expect(portIds.has(contract.toPortId)).toBe(true);
+      expect(tradeGoodIds.has(contract.requiredGoodId)).toBe(true);
+      expect(gearRoleMeta[contract.recommendedRole]).toBeTruthy();
+      expect(contract.rewards.shells ?? 0).toBeGreaterThan(0);
+      if (contract.requiredEventId) {
+        expect(eventIds.has(contract.requiredEventId)).toBe(true);
+      }
+      if (contract.bonusEventId) {
+        expect(eventIds.has(contract.bonusEventId)).toBe(true);
       }
     }
 
